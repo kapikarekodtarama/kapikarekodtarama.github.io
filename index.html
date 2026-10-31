@@ -5,7 +5,7 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:#0e1620;color:#fff;font-family:system-ui,"Segoe UI",Arial,sans-serif;overscroll-behavior:none;touch-action:manipulation}
-#log,#res{overscroll-behavior:contain}   /* günlük/sonuç kutusu kaydırması sayfaya geçip yenilemeyi tetiklemesin */
+#log,#res{overscroll-behavior:contain}   
 #app{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);height:100%;gap:10px;padding:10px}
 #app>*{min-width:0}
 .cam{position:relative;background:#000;border-radius:10px;overflow:hidden;min-height:0}
@@ -14,6 +14,7 @@ video{width:100%;height:100%;object-fit:cover}
 .bar{position:absolute;left:0;right:0;top:0;display:flex;gap:8px;align-items:center;padding:8px;background:rgba(0,0,0,.55);font-size:14px}
 .bar select{flex:1;min-width:0;background:#222;color:#fff;border:1px solid #555;border-radius:4px;padding:4px}
 #dot{width:12px;height:12px;border-radius:50%;background:#888;flex:none}
+#ev{flex:none;font-size:12px;padding:3px 7px;border-radius:4px;color:#fff;letter-spacing:.5px}
 .side{display:flex;flex-direction:column;gap:10px;min-height:0}
 #res{flex:1;border:8px solid #445;border-radius:10px;background:#1b2733;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;text-align:center;padding:14px;min-height:0;overflow:auto}
 #res>:first-child{margin-top:auto}#res>:last-child{margin-bottom:auto}
@@ -32,7 +33,7 @@ video{width:100%;height:100%;object-fit:cover}
 #log .pill{padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.14);font-size:11px;font-weight:700;text-align:center;white-space:nowrap}
 #log .pill.eslid{color:#ffe082}#log .pill.esizd{color:#b0bec5}
 #log .pp{padding:4px 8px;min-height:32px;border:2px solid #ffcc80;border-radius:7px;background:transparent;color:#ffcc80;font-size:14px;font-weight:800;cursor:pointer;white-space:nowrap;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none}
-#log .pp.armed{background:rgba(255,204,128,.28)}   /* ilk dokunuş algılandı: 2. dokunuşu bekliyor, henüz hiçbir şey değişmedi */
+#log .pp.armed{background:rgba(255,204,128,.28)}   
 .stats{display:flex;gap:8px;font-weight:700}
 .stats span{flex:1;padding:6px;border-radius:6px;text-align:center}
 #log{height:26%;overflow:auto;background:#152030;border-radius:8px;padding:6px;font-size:14px}
@@ -47,7 +48,7 @@ video{width:100%;height:100%;object-fit:cover}
 .mini{background:none;border:0;color:#78909c;font-size:12px;text-decoration:underline;cursor:pointer;padding:2px;align-self:flex-start}
 #start{position:fixed;inset:0;background:#0e1620;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;z-index:9;text-align:center;padding:20px}
 #start button{font-size:24px;padding:18px 44px;border:0;border-radius:10px;background:#2e7d32;color:#fff;font-weight:700;cursor:pointer}
-/* Dar ekran kuralları EN SONDA olmalı: aynı güçteki normal kuralları ancak böyle ezebilir. */
+
 @media(max-width:800px){#app{grid-template-columns:minmax(0,1fr);grid-template-rows:33% 1fr;gap:8px;padding:8px}.side{gap:8px}#log{flex:none;height:clamp(124px,18vh,180px)}.stats span{padding:4px;white-space:nowrap;font-size:clamp(13px,3.9vw,16px)}#man{padding:6px 8px}.mini{padding:0;font-size:11px}#res{padding:8px;border-width:6px}
 #res.compact .s{margin-top:2px;font-size:clamp(13px,min(3.8vw,2.2vh),18px)}
 #res .t{font-size:clamp(18px,min(6vw,3.6vh),40px)}#res .r,#res .s{font-size:clamp(14px,min(4.6vw,2.8vh),26px)}#res .n{font-size:clamp(22px,min(7vw,4.2vh),46px)}
@@ -65,7 +66,7 @@ video{width:100%;height:100%;object-fit:cover}
 </div>
 <div id="app">
   <div class="cam"><video id="v" playsinline muted></video><div class="aim"></div>
-    <div class="bar"><i id="dot"></i><span id="st">Sunucu kontrol ediliyor…</span><select id="cams"></select></div></div>
+    <div class="bar"><b id="ev"></b><i id="dot"></i><span id="st">Sunucu kontrol ediliyor…</span><select id="cams"></select></div></div>
   <div class="side">
     <div id="res"></div>
     <div class="stats"><span style="background:#2e7d32">Giriş: <b id="cOk">0</b></span><span style="background:#ef6c00">Mükerrer: <b id="cDup">0</b></span><span style="background:#c62828">Hata: <b id="cErr">0</b></span></div>
@@ -77,53 +78,52 @@ video{width:100%;height:100%;object-fit:cover}
 <script>
 "use strict";
 
-/* ============================================================
- * Ayarlar
- * ============================================================ */
 const CFG = {
-  URL: "https://script.google.com/macros/s/AKfycbymPV2vUX0GO4reP_71iNhDOyuFkKdQ4DZUBjmiRLJg_kyC74l6gqn0t6j0TsOueRtV/exec",
-  // Boş bırakılırsa ilk açılışta sorulur ve yalnızca bu cihazın tarayıcısında saklanır.
-  // Script Properties > CIHAZ_ANAHTARI ile aynı olmalı.
+  ID: "zafer",
+  BASLIK: "Zafer Bayramı Resepsiyonu",
+  KISA: "ZAFER",
+  RENK: "#6a1b9a",
+  URL: "ZAFER_WEB_UYGULAMASI_ADRESI_BURAYA",
   KEY: "",
-  TIMEOUT: 25000,      // yerel liste YOKKEN sunucu yanıt bekleme süresi (ms)
-  TIMEOUT_FAST: 10000, // yerel liste VARKEN: bu sürede yanıt gelmezse o okutma yerel listeyle karara bağlanır (ms)
-  PROBE_MS: 4000,      // çevrimdışıyken bağlantıyı yoklama aralığı (ms)
-  PROBE_TIMEOUT: 8000, // çevrimdışıyken tek yoklamanın bekleme süresi (ms) — Apps Script bazen yavaş yanıtlar
-  LIST_REFRESH: 60000, // davetli listesini sunucudan yenileme aralığı (ms); sunucu yanıtı 15 sn önbellekli olduğundan ucuzdur
-  LIST_TIMEOUT: 40000, // liste indirmesi için bekleme süresi (ms); büyük listelerde uzun sürebilir
-  COOLDOWN: 4000,      // sonuç ekrana geldikten sonra AYNI kodun yeniden işlenmediği süre (ms)
-  REARM_MS: 1500,      // aynı kod kamerada durmaya devam ettiği sürece yeniden okunmaz; kameradan bu kadar (ms) kaybolursa okunabilir
-  RETRY_MS: 1000,      // bağlantı hatasında kod hâlâ kamerada duruyorsa yeniden deneme aralığı (ms)
-  SCAN_MS: 70,         // iki çözme denemesi arası en az süre (ms) — CPU/ısı tasarrufu
-  DBLTAP_MS: 500,      // günlükteki "1 KİŞİ / 2 KİŞİ" düğmesi: değişim için iki dokunuş arası en çok bu kadar (ms) olmalı
-  STALE_MS: 30000,     // sonuç ekrandan KAYBOLMAZ (yeni karekod okunana kadar kalır); bu süre sonra "ÖNCEKİ SONUÇ" diye soluklaşır ve düğmesi kapanır (ms)
-  KEEPALIVE: 60000,    // sunucuyu sıcak tutma aralığı (ms)
-  LOCAL_FIRST: true,   // true: davetli yerel listede varsa karar ANINDA yerelden verilir, tabloya arka planda yazılır (kapıda bekleme yok). false: her okutmada sunucuya sorulur
-  SYNC_DELAY: 300,     // yerel kararın ardından kuyruğu sunucuya göndermeyi deneme gecikmesi (ms)
-  SYNC_PARALLEL: 3,    // arka plan senkronunda aynı anda gönderilen giriş sayısı
-  KEEP_LOCAL_MS: 120000// bu cihazın az önce işlediği giriş, gecikmiş/bayat bir liste yanıtıyla silinmesin (ms)
+  TIMEOUT: 25000,
+  TIMEOUT_FAST: 10000,
+  PROBE_MS: 4000,
+  PROBE_TIMEOUT: 8000,
+  LIST_REFRESH: 60000,
+  LIST_TIMEOUT: 40000,
+  COOLDOWN: 4000,
+  REARM_MS: 1500,
+  RETRY_MS: 1000,
+  SCAN_MS: 70,
+  DBLTAP_MS: 500,
+  STALE_MS: 30000,
+  KEEPALIVE: 60000,
+  LOCAL_FIRST: true,
+  SYNC_DELAY: 300,
+  SYNC_PARALLEL: 3,
+  KEEP_LOCAL_MS: 120000
 };
 
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
 const CLIENT_ERROR = {renk: "#b71c1c", bg: "#ffebee", border: "#c62828"};
 
-/* ============================================================
- * Yardımcılar
- * ============================================================ */
 const $ = id => document.getElementById(id);
 const ESC_MAP = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"};
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ESC_MAP[c]);
 const store = {
-  get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } },
-  set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
+  get(k) { try { return localStorage.getItem(CFG.ID + ":" + k); } catch (_) { return null; } },
+  set(k, v) { try { localStorage.setItem(CFG.ID + ":" + k, v); } catch (_) {} }
 };
 const deviceKey = () => CFG.KEY || store.get("key") || "";
+document.title = CFG.BASLIK + " - Kapı Tarama";
+document.querySelector("#start h1").textContent = CFG.BASLIK;
+$("ev").textContent = CFG.KISA;
+$("ev").style.background = CFG.RENK;
+if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(CFG.URL)) {
+  $("err").textContent = "Bu tarayıcının sunucu adresi (CFG.URL) ayarlanmamış.";
+  $("go").disabled = true;
+}
 
-/* ============================================================
- * Sunucu iletişimi (JSONP — her istek benzersiz callback kullanır)
- * Yanıt sözleşmesi: { kod, rutbe, adSoyad, durum, saat, renk, bg, border, requestId }
- * Hata yüklerinde başlık `adSoyad`, mesaj `durum`, ayrıntı `saat` alanındadır.
- * ============================================================ */
 const api = (() => {
   let seq = 0;
 
@@ -137,7 +137,7 @@ const api = (() => {
         if (finished) return;
         finished = true;
         clearTimeout(timer);
-        window[cb] = () => {};                       // geç gelen yanıt hata vermesin
+        window[cb] = () => {};
         script.remove();
         setTimeout(() => delete window[cb], 60000);
         fn(value);
@@ -153,9 +153,8 @@ const api = (() => {
     });
   }
 
-  let lastError = null;   // son hatanın türü: "net" (bağlantı yok/hata) veya "timeout" (yanıt gelmedi)
+  let lastError = null;
 
-  /** Ağ/zaman aşımı hatasında null döner; sunucu yanıtını olduğu gibi verir. track=false: lastError'a dokunmaz. */
   async function request(params, timeout, track = true) {
     try { if (track) lastError = null; return await jsonp(params, timeout); }
     catch (e) { if (track) lastError = e.message === "timeout" ? "timeout" : "net"; return null; }
@@ -163,23 +162,18 @@ const api = (() => {
 
   function call(ref, opts = {}) {
     const params = {ref};
-    if (opts.saat) params.saat = opts.saat;                          // çevrimdışı girişin gerçek saati
-    if (opts.donem != null) params.donem = opts.donem;               // girişin ait olduğu veri dönemi
-    if (opts.kisi != null) params.kisi = opts.kisi;                  // eşli davette içeri alınan kişi sayısı (1 veya 2)
+    if (opts.saat) params.saat = opts.saat;
+    if (opts.donem != null) params.donem = opts.donem;
+    if (opts.kisi != null) params.kisi = opts.kisi;
     return request(params, opts.timeout || CFG.TIMEOUT);
   }
 
-  /** Davetli listesini indirir (çevrimdışı mod için). Başarısızsa null. Bağlantı durumunu etkilemez. */
   const list = () => request({action: "liste"}, CFG.LIST_TIMEOUT, false);
-  /** Eşli davetlinin giriş kişi sayısını düzeltir (1 = eşsiz geldi, 2 = eşli geldi). */
   const people = (ref, n) => request({action: "kisi", ref, sayi: n}, CFG.TIMEOUT);
 
   return {call, list, people, error: () => lastError};
 })();
 
-/* ============================================================
- * Ses
- * ============================================================ */
 const beep = (() => {
   const PATTERNS = {ok: [[880, .12]], dup: [[440, .15], [440, .15]], err: [[180, .45]]};
   let ac;
@@ -199,9 +193,6 @@ const beep = (() => {
   };
 })();
 
-/* ============================================================
- * Arayüz: sonuç paneli, sayaçlar, günlük
- * ============================================================ */
 const ui = (() => {
   const counts = {ok: 0, dup: 0, err: 0};
   const COUNTER_IDS = {ok: "cOk", dup: "cDup", err: "cErr"};
@@ -231,7 +222,6 @@ const ui = (() => {
     paint({bg: "#263545", renk: "#fff", border: "#607d8b"}, '<div class="t">Kontrol ediliyor…</div>');
   }
 
-  /** Sunucu yükünü ekranda gösterilecek parçalara çevirir (hata/başarı şekli farklıdır). */
   function toView(p, kind) {
     if (kind === "err") {
       return {
@@ -245,18 +235,13 @@ const ui = (() => {
     };
   }
 
-  /**
-   * Rozet (davet türü, SABİT):  "EŞLİ DAVET"  /  "EŞSİZ DAVET"
-   * Düğme (içeri alınan kişi sayısı, dokunuşla 2↔1 değişir):  "2 KİŞİ"  /  "1 KİŞİ"
-   */
   const INVITE = {2: "EŞLİ DAVET", 1: "EŞSİZ DAVET"};
   const PEOPLE = {2: "2 KİŞİ", 1: "1 KİŞİ"};
   const MAX_LOG = 40, UI_KEY = "uiState_v1";
-  const logData = [];   // günlük kayıtları (en yeni başta): {t, name, tag, color, entry}
+  const logData = [];
 
   const showCounts = () => { for (const k in COUNTER_IDS) $(COUNTER_IDS[k]).textContent = counts[k]; };
 
-  /** Sayaçlar ve günlük cihazda saklanır: sayfa yenilense ya da tarayıcı kapansa da kaybolmaz. */
   function persistUi() {
     store.set(UI_KEY, JSON.stringify({
       counts,
@@ -267,13 +252,11 @@ const ui = (() => {
     }));
   }
 
-  /** Kişi sayısını 2↔1 çevirir; sayaç, ekran, günlük ve tablodaki kayıt güncellenir. */
   function togglePeople(entry) {
     const n = entry.people === 2 ? 1 : 2, delta = n - entry.people;
-    // Aynı kişinin tüm kayıtları (ilk giriş + mükerrerler) eşitlenir: düğmeler birbiriyle tutarlı kalır.
     const same = logData.map(r => r.entry).filter(e => e && e.token === entry.token);
     if (!same.includes(entry)) same.push(entry);
-    if (same.some(e => !e.dup)) counts.ok += delta;   // "Giriş" sayacı yalnızca bu cihazdaki girişi kapsar; salt mükerrer düzeltmesi sayacı oynatmaz
+    if (same.some(e => !e.dup)) counts.ok += delta;
     same.forEach(e => {
       e.people = n;
       if (e.logBtn) e.logBtn.textContent = PEOPLE[n];
@@ -285,11 +268,6 @@ const ui = (() => {
     savePeople(entry.token, n, [entry.r, entry.a].filter(Boolean).join(" "));
   }
 
-  /**
-   * Günlük düğmesi: liste kaydırılırken yanlışlıkla dokunulunca veri değişmesin diye ÇİFT dokunuş ister.
-   * Tek dokunuş yalnızca düğmeyi kısa süre vurgular (hiçbir şey kaydedilmez); CFG.DBLTAP_MS içinde ikinci
-   * dokunuş gelirse değişir. (Tarayıcının dblclick olayı telefonlarda güvenilir olmadığı için iki "click" süresiyle ölçülür.)
-   */
   function onLogTap(entry) {
     const now = Date.now(), b = entry.logBtn;
     if (entry.armedAt && now - entry.armedAt <= CFG.DBLTAP_MS) {
@@ -303,7 +281,6 @@ const ui = (() => {
   function buildRow(rec) {
     const row = document.createElement("div");
     row.style.borderColor = rec.color;
-    // Rütbe ayrı satırda (küçük/soluk), ad soyad altında (büyük/kalın). Eski kayıt ve hata satırları rec.name'e düşer.
     const e = rec.entry, split = e && e.a;
     const rank = split ? (e.r || "") : "";
     const who = split ? e.a : rec.name;
@@ -312,7 +289,6 @@ const ui = (() => {
       + `<span class="nm">${esc(who)}</span></span>`;
     const entry = rec.entry;
     if (entry) {
-      // Üstte davet türü (etiket, sabit), altta içeri alınan kişi sayısı (düğme): etiket ile düğme görünüşçe ayrışır.
       const ctl = document.createElement("span"); ctl.className = "ctl";
       const pill = document.createElement("span");
       pill.className = "pill " + (entry.invited === 2 ? "eslid" : "esizd");
@@ -335,21 +311,19 @@ const ui = (() => {
     persistUi();
   }
 
-  /** Sayfa yeniden açılınca sayaçları ve günlüğü (çalışan düğmeleriyle) geri yükler. */
   function restore() {
     let saved = null;
     try { saved = JSON.parse(store.get(UI_KEY) || "null"); } catch (_) {}
     if (!saved) return;
     Object.assign(counts, saved.counts || {});
     showCounts();
-    (saved.rows || []).slice().reverse().forEach(r => {      // kayıt en yeni başta; eskiden yeniye ekle
+    (saved.rows || []).slice().reverse().forEach(r => {
       const rec = {t: r.t, name: r.name, tag: r.tag, color: r.color, entry: r.e ? {...r.e} : null};
       logData.unshift(rec);
       $("log").prepend(buildRow(rec));
     });
   }
 
-  /** Sayaçları ve günlüğü sıfırlar (yerel veri temizlenirken). */
   function reset() {
     counts.ok = counts.dup = counts.err = 0;
     showCounts();
@@ -358,13 +332,10 @@ const ui = (() => {
     store.set(UI_KEY, "");
   }
 
-  /** opts: {token: okutulan davetiye kodu} */
   function show(p, opts) {
     const kind = kindOf(p);
     if (kind === "err" && !p.renk) Object.assign(p, CLIENT_ERROR);
     const view = toView(p, kind);
-    // Her giriş (mükerrer dahil): davet türü rozeti ve içeri alınan kişi sayısı düğmesi. Kayıtlı sayı varsa o,
-    // yoksa davet türüne göre varsayılan (eşli 2, tek kişilik 1) gösterilir; görevli düğmeyle düzeltir.
     const invited = p.esli ? 2 : 1;
     const entry = (kind === "ok" || kind === "dup") && opts && opts.token
       ? {token: opts.token, invited, people: p.kisi || invited, r: p.rutbe, a: p.adSoyad, dup: kind === "dup"} : null;
@@ -374,13 +345,11 @@ const ui = (() => {
         (entry ? '<button class="solo" id="solo" type="button">' + PEOPLE[entry.people] + '</button>' : "") + '</div>'
       : ""));
     $("res").classList.toggle("compact", !!badge);
-    if (entry) { entry.panelBtn = $("solo"); entry.panelBtn.onclick = () => togglePeople(entry); }   // sonuç kutusunda tek dokunuş yeter
+    if (entry) { entry.panelBtn = $("solo"); entry.panelBtn.onclick = () => togglePeople(entry); }
     beep(kind);
-    counts[kind] += kind === "ok" ? (entry ? entry.people : (p.kisi || 1)) : 1;   // "Giriş" sayacı KİŞİ sayısını, "Mükerrer" okutma sayısını sayar
+    counts[kind] += kind === "ok" ? (entry ? entry.people : (p.kisi || 1)) : 1;
     showCounts();
     log(view, p.border || p.renk, entry);
-    // Sonuç yeni karekod okunana kadar ekranda KALIR; uzun süre geçerse "önceki sonuç" olarak soluklaşır (yanlış kişiye ait
-    // eski bir "başarılı" sonucun açık kalıp karışıklık yaratmaması için) ve panel düğmesi kapanır (günlükteki düğme açık kalır).
     clearTimeout(idleTimer);
     idleTimer = setTimeout(markStale, CFG.STALE_MS);
   }
@@ -394,15 +363,11 @@ const ui = (() => {
     show({kod, adSoyad: title, durum: message, saat: "", ...CLIENT_ERROR});
   }
 
-  /** Günlüğe bilgi/uyarı satırı ekler (sayaçları değiştirmez). */
   function note(text, color) { log({logName: text, logTag: ""}, color); }
 
   return {show, idle, checking, clientError, note, restore, reset, hasData: () => counts.ok + counts.dup + counts.err > 0};
 })();
 
-/* ============================================================
- * Yerel davetli listesi + senkron kuyruğu (çevrimdışı mod)
- * ============================================================ */
 const TIME_RE = /\d{2}:\d{2}:\d{2}/;
 const secs = t => { const [h, m, s] = t.split(":").map(Number); return h * 3600 + m * 60 + s; };
 const secDiff = (a, b) => { const d = Math.abs(secs(a) - secs(b)); return Math.min(d, 86400 - d); };
@@ -410,7 +375,7 @@ const secDiff = (a, b) => { const d = Math.abs(secs(a) - secs(b)); return Math.m
 const local = (() => {
   const LIST_KEY = "guestList_v1", QUEUE_KEY = "queue_v1";
   let items = {}, count = 0, skew = 0, tz = "UTC", queue = [], saveTimer, savedEpoch = null, idSeq = 0;
-  let texts = null, notFound = null;   // sunucunun gönderdiği çevrimdışı karar metinleri (yoksa TEXT / yerleşik varsayılan)
+  let texts = null, notFound = null;
 
   const read = k => { try { return JSON.parse(store.get(k) || "null"); } catch (_) { return null; } };
   const persistList = () => store.set(LIST_KEY, JSON.stringify({items, skew, tz, epoch: savedEpoch, txt: texts, nf: notFound}));
@@ -426,14 +391,9 @@ const local = (() => {
       texts = saved.txt || null; notFound = saved.nf || null;
     }
     queue = read(QUEUE_KEY) || [];
-    queue.forEach(q => { if (!q.id) q.id = Date.now() + "-" + (++idSeq); });   // eski sürümden kalan kayıtlara kimlik ver
+    queue.forEach(q => { if (!q.id) q.id = Date.now() + "-" + (++idSeq); });
   }
 
-  /**
-   * Sunucudan gelen listeyi yerleştirir; henüz senkronlanmamış yerel girişleri korur.
-   * Sunucudaki "veri dönemi" değişmişse (tablo sıfırlanmış) bekleyen girişler silinir.
-   * @return {{reset: boolean, dropped: boolean}} reset: dönem değişti; dropped: bekleyen girişler silindi
-   */
   function replace(payload) {
     const epoch = payload.donem || "";
     const reset = savedEpoch !== null && savedEpoch !== epoch;
@@ -444,30 +404,27 @@ const local = (() => {
     payload.liste.forEach(g => {
       const m = {r: g.r, a: g.a, l: g.l, k: !!g.k, s: g.s || "", e: !!g.e, p: g.p || 0};
       const o = old[g.t];
-      // Bu cihazın az önce işlediği giriş, önbellekten gelen bayat bir yanıtla "girmedi"ye dönmesin.
       if (o && o.k && !m.k && o.ka && now - o.ka < CFG.KEEP_LOCAL_MS) { m.k = true; m.s = o.s; m.p = o.p || m.p; m.ka = o.ka; }
       map[g.t] = m;
     });
     queue.forEach(q => {
-      if (q.type === "kisi") { if (map[q.token]) map[q.token].p = q.kisi; return; }   // bekleyen düzeltme listede de görünsün
+      if (q.type === "kisi") { if (map[q.token]) map[q.token].p = q.kisi; return; }
       if (map[q.token] && !map[q.token].k) { map[q.token].k = true; map[q.token].s = q.time; map[q.token].p = q.kisi || 0; }
     });
     items = map; count = payload.liste.length;
     tz = payload.tz || tz;
     texts = payload.txt || texts; notFound = payload.nf || notFound;
-    skew = (payload.zaman || Date.now()) - Date.now();   // cihaz saati sunucudan ne kadar farklı
+    skew = (payload.zaman || Date.now()) - Date.now();
     persistList();
     return {reset, dropped};
   }
 
-  /** Bu cihazdaki liste ve bekleyen girişlerin hepsini siler. */
   function wipe() {
     clearTimeout(saveTimer);
     items = {}; count = 0; queue = []; savedEpoch = null;
     store.set(LIST_KEY, ""); store.set(QUEUE_KEY, "[]");
   }
 
-  /** Sunucu saat diliminde, sunucu saatine göre "SS:DD:ss". */
   function clock() {
     const d = new Date(Date.now() + skew);
     try {
@@ -485,9 +442,7 @@ const local = (() => {
   }
   function enqueue(entry) { queue.push({...entry, id: Date.now() + "-" + (++idSeq)}); saveQueue(); }
   function dequeue(id) { queue = queue.filter(q => q.id !== id); saveQueue(); }
-  /** Gönderim denemesi yanıtsız kaldı: sonucu belirsiz (sunucu işlemiş olabilir). */
   function markTried(id) { const q = queue.find(x => x.id === id); if (q) { q.tried = true; saveQueue(); } }
-  /** Giriş henüz sunucuya gönderilmediyse kişi sayısını bekleyen kayıtta günceller. @return {boolean} bulundu mu */
   function updateQueuedPeople(token, n) {
     const q = queue.find(x => x.token === token && !x.type);
     if (!q) return false;
@@ -497,9 +452,8 @@ const local = (() => {
 
   return {
     load, replace, wipe, clock, markEntered, setPeople, enqueue, dequeue, markTried, updateQueuedPeople,
-    epoch: () => (savedEpoch === null ? null : (savedEpoch || "0")),   // sunucu "0" = hiç sıfırlanmamış
+    epoch: () => (savedEpoch === null ? null : (savedEpoch || "0")),
     get: t => items[t] || null,
-    /** Çevrimdışı karar metni: sunucudan gelen (liste yanıtıyla) varsa o, yoksa yerleşik TEXT. */
     text: lang => (texts && (texts[lang] || texts.tr)) || TEXT[lang] || TEXT.tr,
     notFoundText: () => notFound,
     ready: () => count > 0,
@@ -509,7 +463,6 @@ const local = (() => {
   };
 })();
 
-/** Bağlantı durumu ve durum çubuğu. */
 const net = (() => {
   const s = {online: true, unauthorized: false, ms: null, strikes: 0};
 
@@ -527,13 +480,8 @@ const net = (() => {
     $("dot").style.background = color;
     $("st").textContent = text;
   }
-  /** @return {boolean} daha önce çevrimdışıydıysa true */
   function up(ms) { s.strikes = 0; const was = !s.online; s.online = true; s.unauthorized = false; if (ms != null) s.ms = ms; render(); return was; }
   function down() { s.strikes = 0; s.online = false; render(); }
-  /**
-   * Başarısız bir isteği değerlendirir. Gerçek bağlantı kaybı ("net") hemen çevrimdışı yapar;
-   * yalnızca yavaş yanıt ("timeout") ise üst üste 2 kez olursa çevrimdışı sayılır.
-   */
   function fail(kind) {
     if (kind === "net" || navigator.onLine === false || ++s.strikes >= 2) { down(); return true; }
     render();
@@ -551,7 +499,6 @@ const COLORS = {
   dup: {renk: "#e65100", bg: "#fff3e0", border: "#ef6c00"}
 };
 
-/** Yerel listeden karar verir. offline=true: sunucuya ulaşılamıyor (ekranda "çevrimdışı" etiketi); false: yerel-öncelikli mod. */
 function offlineResult(token, offline = true, tried = false) {
   const g = local.get(token);
   if (!g) {
@@ -563,14 +510,12 @@ function offlineResult(token, offline = true, tried = false) {
 
   const time = local.clock();
   local.markEntered(token, time, g.e ? 2 : 1);
-  // tried: sunucuya istek gitti ama yanıt gelmedi; sunucu girişi işlemiş olabilir (senkronda "zaten girmiş" demesi çakışma değil)
   local.enqueue({token, time, r: g.r, a: g.a, epoch: local.epoch(), kisi: g.e ? 2 : 1, ...(tried ? {tried: true} : {})});
   net.render();
-  scheduleSync(offline ? 2000 : CFG.SYNC_DELAY);   // girişi kısa süre içinde arka planda sunucuya gönder
+  scheduleSync(offline ? 2000 : CFG.SYNC_DELAY);
   return {kod: "OK", rutbe: g.r, adSoyad: g.a, durum: t.ok, saat: t.okT + time + (offline ? " (çevrimdışı)" : ""), esli: !!g.e, kisi: g.e ? 2 : 1, ...COLORS.ok};
 }
 
-/** Sunucu yanıtından giriş bilgisini yerel listeye de işler (sonradan çevrimdışı kalınırsa güncel olsun). */
 function absorb(token, r) {
   if (r.kod === "OK" || r.kod === "DUPLICATE") {
     const t = (String(r.saat).match(TIME_RE) || [])[0];
@@ -578,26 +523,19 @@ function absorb(token, r) {
   }
 }
 
-/** Kuyruğa giren girişi kısa süre sonra göndermeyi dener (başka okutma ya da yoklama beklenmesin). */
 let syncTimer;
 function scheduleSync(ms) {
   clearTimeout(syncTimer);
   syncTimer = setTimeout(() => { if (net.s.online && local.pending()) sync(); }, ms);
 }
 
-/**
- * Kuyruktaki girişleri sunucuya gönderir (CFG.SYNC_PARALLEL adedi aynı anda). Sunucu "ERROR" (ör. kilit zaman aşımı)
- * dönerse giriş kuyrukta KALIR ve sonra yeniden denenir; hiçbir giriş "hata" diye silinmez.
- * Aynı davetli kuyrukta yalnızca bir kez bulunur; kişi sayısı düzeltmeleri girişlerden SONRA gönderilir.
- */
 let syncing = false;
 
-/** Tek girişi gönderir. @return {boolean} true: işlendi; false: dur (yeniden deneme planlandı ya da yetkisiz) */
 async function syncEntry(q) {
   const who = [q.r, q.a].filter(Boolean).join(" ");
   const sentKisi = q.kisi;
   const r = await api.call(q.token, {saat: q.time, donem: q.epoch, kisi: q.kisi, timeout: CFG.TIMEOUT});
-  if (!r || r.kod === "ERROR") {                                   // yanıt yok / sunucu hatası: sonuç belirsiz, girişi koru
+  if (!r || r.kod === "ERROR") {
     if (!r) net.fail(api.error());
     local.markTried(q.id);
     scheduleSync(5000);
@@ -605,10 +543,8 @@ async function syncEntry(q) {
   }
   if (r.kod === "UNAUTHORIZED") { net.s.unauthorized = true; net.render(); return false; }
   local.dequeue(q.id);
-  if (q.kisi !== sentKisi) local.enqueue({type: "kisi", token: q.token, kisi: q.kisi, a: who});   // istek yoldayken yapılan kişi sayısı düzeltmesi kaybolmasın
+  if (q.kisi !== sentKisi) local.enqueue({type: "kisi", token: q.token, kisi: q.kisi, a: who});
   if (r.kod === "DUPLICATE") {
-    // Bu cihazın kendi girişi sayılır: (a) sunucudaki saat bu girişin saatiyle birebir aynıysa (yanıt kaybolmuş/yeniden gönderilmiş),
-    // ya da (b) giriş daha önce YANITSIZ kaldıysa ve saatler yakınsa. Aksi halde başka cihaz (kapı) aynı davetliyi girmiştir.
     const theirs = (String(r.saat).match(TIME_RE) || [])[0];
     const gap = theirs ? secDiff(theirs, q.time) : Infinity;
     const own = gap === 0 || (q.tried && gap <= 120);
@@ -622,7 +558,6 @@ async function syncEntry(q) {
   return true;
 }
 
-/** Kapıdaki "eşsiz/eşli geldi" düzeltmesini gönderir. @return {boolean} true: işlendi; false: dur */
 async function syncPeople(q) {
   const who = q.a || "";
   const pr = await api.people(q.token, q.kisi);
@@ -647,25 +582,23 @@ async function sync() {
     await Promise.all(Array.from({length: Math.min(CFG.SYNC_PARALLEL, entries.length)}, worker));
     if (stop) return;
     for (const q of people) { if (!(await syncPeople(q))) return; }
-    if (local.pending()) scheduleSync(CFG.SYNC_DELAY);                 // döngü sürerken eklenen girişler beklemesin
+    if (local.pending()) scheduleSync(CFG.SYNC_DELAY);
   } finally { syncing = false; }
 }
 
-/** Kişi sayısı düzeltmesini kaydeder: bekleyen girişi güncelle, değilse sunucuya gönder, olmazsa sıraya al. */
 async function savePeople(token, n, who) {
-  if (local.updateQueuedPeople(token, n)) { scheduleSync(2000); return; }   // giriş henüz gönderilmedi: kayıt yerinde güncellendi
+  if (local.updateQueuedPeople(token, n)) { scheduleSync(2000); return; }
   if (net.s.online) {
     const r = await api.people(token, n);
     if (r && r.kod === "PEOPLE") return;
     if (r) { ui.note(`⚠ Kişi sayısı kaydedilemedi: ${who} (${r.kod})`, "#c62828"); return; }
     net.fail(api.error());
   }
-  local.enqueue({type: "kisi", token, kisi: n, a: who});                      // sunucuya ulaşılamadı: sonra gönder
+  local.enqueue({type: "kisi", token, kisi: n, a: who});
   net.render();
   scheduleSync(5000);
 }
 
-/** Davetli listesini sunucudan yeniler (başarısızsa eski liste kalır). @return {boolean} başarılı mı */
 let refreshing = false;
 async function refreshList() {
   if (refreshing || !net.s.online) return false;
@@ -674,7 +607,7 @@ async function refreshList() {
     const r = await api.list();
     if (r && r.kod === "LIST" && Array.isArray(r.liste)) {
       const res = local.replace(r);
-      if (res.reset) {                                  // tablo sıfırlandı: eski test sayaçları/günlük de silinsin
+      if (res.reset) {
         ui.reset(); ui.idle();
         ui.note(res.dropped
           ? "⚠ Sunucudaki veriler sıfırlanmış: sayaçlar, günlük ve bekleyen girişler temizlendi"
@@ -688,18 +621,12 @@ async function refreshList() {
   } finally { refreshing = false; }
 }
 
-/** Bekleyen girişleri HEMEN gönderir (liste indirmesini beklemez), sonra listeyi yeniler. */
 async function syncAll() { await sync(); refreshList(); }
 
-/* ============================================================
- * Okunan kodu işle
- * ============================================================ */
 const scanner = (() => {
-  // kod -> {seen: kamerada en son görüldüğü an, holdUntil: bu ana kadar işlenmez, retry: bağlantı hatası sonrası yeniden denensin mi}
   const state = new Map();
   const STATE_TTL = 10 * 60 * 1000;
 
-  /** Rastgele/bozuk okumalar tabloyu sonsuz büyütmesin: uzun süredir görülmeyen ve bekleme süresi bitmiş kayıtları siler. */
   function prune(now) {
     if (state.size < 200) return;
     for (const [k, v] of state) if (now - v.seen > STATE_TTL && now >= v.holdUntil) state.delete(k);
@@ -716,13 +643,11 @@ const scanner = (() => {
 
     let st = state.get(key);
     if (!st) { st = {seen: 0, holdUntil: 0, retry: false}; state.set(key, st); }
-    const inView = now - st.seen < CFG.REARM_MS;   // kod kameradan hiç ayrılmadan görülmeye devam ediyor
-    st.seen = now;                                 // her görüşte yenilenir: kod kamerada durdukça engel sürer
+    const inView = now - st.seen < CFG.REARM_MS;
+    st.seen = now;
     if (now < st.holdUntil || (inView && !st.retry)) return;
     st.retry = false;
 
-    // Sonuç (başarılı, mükerrer ya da hata) ekrana geldikten SONRA aynı kod bir süre daha işlenmez.
-    // Süre okuma anından değil sonuç anından başlar; sunucu yavaş yanıtlasa da engel tükenmez.
     const done = hold => { st.seen = Date.now(); st.holdUntil = Date.now() + hold; };
 
     if (!token) {
@@ -732,44 +657,38 @@ const scanner = (() => {
 
     const known = local.get(token);
 
-    // Yerel-öncelikli mod: davetli yerel listede varsa karar ANINDA verilir (sunucuyu beklemez, kamera kilitlenmez);
-    // giriş kuyruğa alınır ve arka planda tabloya yazılır. Listede olmayan kod aşağıda sunucuya sorulur.
     if (CFG.LOCAL_FIRST && known) {
       const offline = !net.s.online;
       ui.show(offlineResult(token, offline), {token});
-      if (offline) ping();                    // çevrimdışıyken her okutma bağlantıyı yoklatır
+      if (offline) ping();
       return done(CFG.COOLDOWN);
     }
 
     ui.checking();
 
-    // Çevrimiçiyse (ya da yerel liste yoksa) önce sunucuya sor.
-    let sent = false;                         // sunucuya istek gitti mi (yanıt gelmese bile sonuç belirsiz kalır)
+    let sent = false;
     if (net.s.online || !local.ready()) {
       sent = true;
       const result = await api.call(token, {timeout: local.ready() ? CFG.TIMEOUT_FAST : CFG.TIMEOUT});
       if (result && result.kod === "ERROR") {
-        // Sunucu hata verdi (ör. kilit zaman aşımı). Davetli yerel listede varsa oradan karar verilir (aşağıda);
-        // yoksa hata gösterilir ve kod kamerada duruyorsa kısa süre sonra yeniden denenir.
         if (!known) { ui.show(result, {token}); st.retry = true; return done(CFG.RETRY_MS); }
       } else if (result) {
-        if (net.up()) syncAll();              // bağlantı geri geldiyse kuyruğu gönder, listeyi yenile
-        else if (local.pending()) sync();     // sunucu yanıt veriyorken bekleyen girişleri de boşalt
-        if (!local.ready()) refreshList();    // yerel liste yoksa (ör. temizlendi) hemen indir
+        if (net.up()) syncAll();
+        else if (local.pending()) sync();
+        if (!local.ready()) refreshList();
         absorb(token, result);
         ui.show(result, {token});
         return done(CFG.COOLDOWN);
       } else {
-        net.fail(api.error());                // tek yavaş yanıt çevrimdışı sayılmaz; bu okutma yerelden karara bağlanır
+        net.fail(api.error());
       }
     } else {
-      ping();                                 // çevrimdışıyken her okutma bağlantıyı yoklatır (geri gelince hemen fark edilsin)
+      ping();
     }
 
-    // Sunucuya ulaşılamadı ya da sunucu hata verdi.
     if (!local.ready()) {
       ui.clientError("NETWORK", "✗ BAĞLANTI HATASI", "Sunucudan yanıt alınamadı. Tekrar okutun.");
-      st.retry = true;                        // kod kamerada duruyorsa kısa süre sonra kendiliğinden yeniden dene
+      st.retry = true;
       return done(CFG.RETRY_MS);
     }
     ui.show(offlineResult(token, true, sent), {token});
@@ -777,42 +696,35 @@ const scanner = (() => {
   };
 })();
 
-/* ============================================================
- * Sunucu durumu / ısıtma / bağlantı yoklama
- * ============================================================ */
 let probing = false;
 async function ping() {
   if (probing) return;
   probing = true;
   try {
     const t0 = performance.now();
-    const r = await api.call("ping", {timeout: net.s.online ? (local.ready() ? CFG.TIMEOUT_FAST : CFG.TIMEOUT) : CFG.PROBE_TIMEOUT});   // geçersiz token: sayfa okumadan hızlı döner
+    const r = await api.call("ping", {timeout: net.s.online ? (local.ready() ? CFG.TIMEOUT_FAST : CFG.TIMEOUT) : CFG.PROBE_TIMEOUT});
     const ms = Math.round(performance.now() - t0);
 
-    if (!r) { if (!net.fail(api.error())) setTimeout(ping, 2000); return; }   // yalnızca yavaşsa 2 sn sonra yeniden yokla
+    if (!r) { if (!net.fail(api.error())) setTimeout(ping, 2000); return; }
     if (r.kod === "UNAUTHORIZED") {
-      store.set("key", "");                    // hatalı anahtarı sakladığımız yerden sil
+      store.set("key", "");
       net.s.unauthorized = true; net.render();
       return;
     }
     if (r.kod === "INVALID_QR") {
       if (net.up(ms) || local.pending()) syncAll();
-      else if (!local.ready()) refreshList();   // yerel liste yoksa indir
+      else if (!local.ready()) refreshList();
       return;
     }
     $("st").textContent = "Beklenmeyen yanıt: " + r.kod;
   } finally { probing = false; }
 }
 
-/* ============================================================
- * Kamera + QR çözücü
- * ============================================================ */
 const camera = (() => {
   const video = $("v");
   const canvas = document.createElement("canvas");
   const ctx2d = canvas.getContext("2d", {willReadFrequently: true});
-  // Yalnızca yerel dosya: index.html ile aynı klasördeki jsQR.js (internetten yükleme yok).
-  const LIB_SOURCES = ["jsQR.js"];
+  const LIB_SOURCES = ["../jsQR.js"];
   let stream, detector = null, detectFails = 0;
 
   const loadScript = src => new Promise((ok, fail) => {
@@ -821,7 +733,6 @@ const camera = (() => {
     document.head.appendChild(s);
   });
 
-  /** Yerleşik BarcodeDetector varsa onu, yoksa jsQR kütüphanesini kullanır. */
   async function initDecoder() {
     try {
       if ("BarcodeDetector" in window && (await BarcodeDetector.getSupportedFormats()).includes("qr_code")) {
@@ -832,7 +743,7 @@ const camera = (() => {
     for (const src of LIB_SOURCES) {
       try { await loadScript(src); if (window.jsQR) return; } catch (_) {}
     }
-    throw new Error("QR çözücü yüklenemedi: jsQR.js dosyası index.html ile aynı klasörde olmalı.");
+    throw new Error("QR çözücü yüklenemedi: jsQR.js dosyası ana dizinde (cumhuriyet ve zafer klasörlerinin bir üstünde) olmalı.");
   }
 
   async function start(deviceId) {
@@ -842,7 +753,7 @@ const camera = (() => {
       : {facingMode: {ideal: "environment"}, width: {ideal: 1280}, height: {ideal: 720}};
     stream = await navigator.mediaDevices.getUserMedia({video: constraints, audio: false});
     const track = stream.getVideoTracks()[0];
-    track.onended = () => setTimeout(ensureRunning, 1000);   // kamera koparsa kendini toparla
+    track.onended = () => setTimeout(ensureRunning, 1000);
     video.srcObject = stream;
     await video.play();
 
@@ -853,7 +764,6 @@ const camera = (() => {
     ).join("");
   }
 
-  /** Kamera akışı canlı değilse (kopma, sekme arka plana gitti) yeniden başlatır; başarısızsa 3 sn sonra dener. */
   let restarting = false;
   async function ensureRunning() {
     const track = stream && stream.getVideoTracks()[0];
@@ -871,7 +781,6 @@ const camera = (() => {
     }
   }
 
-  /** Yerleşik çözücü art arda hata verirse (bazı cihazlarda olur) jsQR'a geçer; jsQR yüklenemezse yerleşikte kalır. */
   async function fallbackToJsQR() {
     detectFails = 0;
     try {
@@ -880,7 +789,6 @@ const camera = (() => {
     } catch (_) {}
   }
 
-  /** Geçerli kareden QR metni döner (yoksa null). */
   async function decode() {
     if (detector) {
       try {
@@ -901,10 +809,6 @@ const camera = (() => {
     return code ? code.data : null;
   }
 
-  /**
-   * Tarama döngüsü: adımlar asla üst üste binmez (await bitince bir sonraki kare planlanır).
-   * onCode beklenirken yeni tarama yapılmaz — sunucu yanıtı gelene kadar kamera "kilitli" kalır.
-   */
   function run(onCode) {
     let lastRun = 0;
     const step = async ts => {
@@ -926,9 +830,6 @@ const camera = (() => {
   return {initDecoder, start, run, ensureRunning};
 })();
 
-/* ============================================================
- * Ekranı açık tut + sekme tekrar görününce kamerayı kontrol et
- * ============================================================ */
 const keepAwake = (() => {
   async function acquire() {
     try {
@@ -938,7 +839,6 @@ const keepAwake = (() => {
     } catch (_) {}
   }
 
-  // Sekme tekrar görününce: ekranı açık tut, kamera akışı donmuşsa yeniden başlat, bağlantıyı ve listeyi tazele.
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
     acquire();
@@ -949,19 +849,14 @@ const keepAwake = (() => {
   return {acquire};
 })();
 
-/* ============================================================
- * Başlat
- * ============================================================ */
 ui.idle();
 local.load();
-ui.restore();   // sayfa yenilenmişse sayaç ve günlük geri gelir
+ui.restore();
 
-// Yanlışlıkla yenileme/kapatma olursa uyar (bilgisayarda ve destekleyen tarayıcılarda); telefonda yenileme zaten engelli ve veri saklı.
 window.addEventListener("beforeunload", e => {
   if (ui.hasData() || local.pending()) { e.preventDefault(); e.returnValue = ""; }
 });
 
-/* Kamera üstündeki durum çubuğunun yüksekliğini CSS'e bildirir: tarama çerçevesi çubuğun altında kalmasın. */
 (() => {
   const bar = document.querySelector(".bar"), cam = document.querySelector(".cam");
   const sync = () => cam.style.setProperty("--bar-h", bar.offsetHeight + "px");
@@ -977,16 +872,16 @@ $("go").onclick = async () => {
       if (!typed) throw new Error("Cihaz anahtarını girin.");
       store.set("key", typed);
     }
-    beep("ok");                              // kullanıcı etkileşimiyle ses bağlamını aç
+    beep("ok");
     await camera.initDecoder();
     await camera.start(store.get("cam")).catch(() => camera.start(null));
     $("start").remove();
     keepAwake.acquire();
     camera.run(scanner);
-    ping().then(refreshList);                                    // bağlantıyı denetle, sonra davetli listesini indir
-    setInterval(ping, CFG.KEEPALIVE);                            // sunucuyu sıcak tut (+ bekleyen girişleri gönder)
-    setInterval(() => { if (!net.s.online) ping(); }, CFG.PROBE_MS);   // çevrimdışıyken bağlantıyı yokla
-    setInterval(refreshList, CFG.LIST_REFRESH);                  // diğer cihazların girişlerini öğren
+    ping().then(refreshList);
+    setInterval(ping, CFG.KEEPALIVE);
+    setInterval(() => { if (!net.s.online) ping(); }, CFG.PROBE_MS);
+    setInterval(refreshList, CFG.LIST_REFRESH);
     window.addEventListener("online", ping);
     window.addEventListener("offline", () => net.down());
   } catch (e) {
@@ -1004,7 +899,7 @@ $("wipe").onclick = () => {
   ui.reset();
   net.render();
   ui.note("Yerel veri temizlendi", "#607d8b");
-  refreshList();                                   // internet varsa listeyi hemen yeniden indir
+  refreshList();
 };
 $("cams").onchange = e => { store.set("cam", e.target.value); camera.start(e.target.value); };
 $("man").addEventListener("keydown", e => {
