@@ -1,17 +1,908 @@
 <!DOCTYPE html>
 <html lang="tr"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Kapı Karekod Tarama</title>
+<title>Kapı Tarama</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{min-height:100%;background:#0e1620;color:#fff;font-family:system-ui,"Segoe UI",Arial,sans-serif}
-main{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center}
-h1{font-size:clamp(22px,5vw,34px);margin-bottom:8px}
-a{display:block;width:min(420px,100%);padding:20px 16px;border-radius:12px;color:#fff;text-decoration:none;font-size:20px;font-weight:700}
-.c{background:#1565c0}.z{background:#6a1b9a}
+html,body{height:100%;background:#0e1620;color:#fff;font-family:system-ui,"Segoe UI",Arial,sans-serif;overscroll-behavior:none;touch-action:manipulation}
+#log,#res{overscroll-behavior:contain}   
+#app{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);height:100%;gap:10px;padding:10px}
+#app>*{min-width:0}
+.cam{position:relative;background:#000;border-radius:10px;overflow:hidden;min-height:0}
+video{width:100%;height:100%;object-fit:cover}
+.aim{position:absolute;top:max(16%,calc(var(--bar-h,44px) + 8px));bottom:16%;left:16%;right:16%;border:3px solid rgba(255,255,255,.65);border-radius:14px;pointer-events:none}
+.bar{position:absolute;left:0;right:0;top:0;display:flex;gap:8px;align-items:center;padding:8px;background:rgba(0,0,0,.55);font-size:14px}
+.bar select{flex:1;min-width:0;background:#222;color:#fff;border:1px solid #555;border-radius:4px;padding:4px}
+#dot{width:12px;height:12px;border-radius:50%;background:#888;flex:none}
+#ev{flex:none;font-size:12px;padding:3px 7px;border-radius:4px;color:#fff;letter-spacing:.5px}
+.side{display:flex;flex-direction:column;gap:10px;min-height:0}
+#res{flex:1;border:8px solid #445;border-radius:10px;background:#1b2733;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;text-align:center;padding:14px;min-height:0;overflow:auto}
+#res>:first-child{margin-top:auto}#res>:last-child{margin-bottom:auto}
+#res .t{font-size:clamp(24px,4.2vw,46px);font-weight:800}
+#res .r{font-size:clamp(17px,2.4vw,28px);margin-top:10px}
+#res .n{font-size:clamp(26px,4.6vw,52px);font-weight:800;margin-top:6px;word-break:break-word}
+#res .s{font-size:clamp(17px,2.4vw,28px);margin-top:12px}
+#res .acts{display:flex;flex-direction:column;gap:6px;align-items:center;justify-content:center;margin-top:8px;width:100%}
+#res .esli{padding:8px 22px;border-radius:10px;background:rgba(0,0,0,.14);font-size:clamp(21px,3vw,34px);font-weight:800}
+#res.compact .t{font-size:clamp(20px,4.2vw,34px)}#res.compact .n{font-size:clamp(22px,4.6vw,38px)}#res.compact .r,#res.compact .s{font-size:clamp(15px,2.4vw,22px);margin-top:4px}
+#res .solo{width:min(94%,420px);min-height:54px;padding:10px 18px;border:3px solid currentColor;border-radius:10px;background:transparent;color:inherit;font-size:clamp(25px,3.6vw,42px);font-weight:800;cursor:pointer}
+#res .solo:disabled{opacity:.4;cursor:default}
+#res.stale{opacity:.5;filter:grayscale(.5)}
+#res.stale::before{content:"ÖNCEKİ SONUÇ";font-weight:800;letter-spacing:1px;font-size:14px;margin-bottom:6px}
+#log .ctl{display:flex;flex-direction:column;gap:5px;align-items:stretch;margin-left:6px;flex:none;min-width:80px}
+#log .pill{padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.14);font-size:11px;font-weight:700;text-align:center;white-space:nowrap}
+#log .pill.eslid{color:#ffe082}#log .pill.esizd{color:#b0bec5}
+#log .pp{padding:4px 8px;min-height:32px;border:2px solid #ffcc80;border-radius:7px;background:transparent;color:#ffcc80;font-size:14px;font-weight:800;cursor:pointer;white-space:nowrap;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none}
+#log .pp.armed{background:rgba(255,204,128,.28)}   
+.stats{display:flex;gap:8px;font-weight:700}
+.stats span{flex:1;padding:6px;border-radius:6px;text-align:center}
+#log{height:26%;overflow:auto;background:#152030;border-radius:8px;padding:6px;font-size:14px}
+#log div{padding:4px 8px;border-left:5px solid;margin-bottom:3px;display:flex;gap:10px;align-items:center}
+#log .info{display:flex;flex-direction:column;flex:1;min-width:0;gap:2px}
+#log .l1{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+#log .tg{color:#cfd8dc;font-size:13px}
+#log .rk{color:#b0bec5;font-size:13px;line-height:1.2}
+#log .nm{overflow-wrap:anywhere;text-wrap:balance;font-size:clamp(15px,4.1vw,17px);font-weight:700;line-height:1.2}
+#man,#key{width:100%;font-size:16px;padding:8px;border-radius:6px;border:1px solid #555;background:#222;color:#fff}
+#key{max-width:320px;text-align:center}
+.mini{background:none;border:0;color:#78909c;font-size:12px;text-decoration:underline;cursor:pointer;padding:2px;align-self:flex-start}
+#start{position:fixed;inset:0;background:#0e1620;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;z-index:9;text-align:center;padding:20px}
+#start button{font-size:24px;padding:18px 44px;border:0;border-radius:10px;background:#2e7d32;color:#fff;font-weight:700;cursor:pointer}
+
+@media(max-width:800px){#app{grid-template-columns:minmax(0,1fr);grid-template-rows:33% 1fr;gap:8px;padding:8px}.side{gap:8px}#log{flex:none;height:clamp(124px,18vh,180px)}.stats span{padding:4px;white-space:nowrap;font-size:clamp(13px,3.9vw,16px)}#man{padding:6px 8px}.mini{padding:0;font-size:11px}#res{padding:8px;border-width:6px}
+#res.compact .s{margin-top:2px;font-size:clamp(13px,min(3.8vw,2.2vh),18px)}
+#res .t{font-size:clamp(18px,min(6vw,3.6vh),40px)}#res .r,#res .s{font-size:clamp(14px,min(4.6vw,2.8vh),26px)}#res .n{font-size:clamp(22px,min(7vw,4.2vh),46px)}
+#res.compact .t{font-size:clamp(17px,min(5.6vw,3.2vh),30px)}#res.compact .n{font-size:clamp(20px,min(6.4vw,3.8vh),38px)}#res.compact .r,#res.compact .s{font-size:clamp(13px,min(4.2vw,2.5vh),20px)}
+#res .esli{font-size:clamp(16px,min(4.8vw,3vh),25px);padding:5px 12px}#res .solo{font-size:clamp(20px,min(5.8vw,3.6vh),29px);padding:6px 12px;min-height:46px}
+.aim{bottom:8%;left:14%;right:14%}}
+@media(max-width:800px) and (max-height:740px){#app{grid-template-rows:28% 1fr}}
 </style></head>
-<body><main>
-<h1>Kapı Karekod Tarama</h1>
-<a class="c" href="cumhuriyet/">Cumhuriyet Bayramı Resepsiyonu</a>
-<a class="z" href="zafer/">Zafer Bayramı Resepsiyonu</a>
-</main></body></html>
+<body>
+<div id="start">
+  <h1>Kapı Karekod Tarama</h1>
+  <input id="key" type="password" placeholder="Cihaz anahtarı" autocomplete="off" hidden>
+  <button id="go">Taramayı Başlat</button>
+  <p id="err" style="color:#ff8a80"></p>
+</div>
+<div id="app">
+  <div class="cam"><video id="v" playsinline muted></video><div class="aim"></div>
+    <div class="bar"><b id="ev"></b><i id="dot"></i><span id="st">Sunucu kontrol ediliyor…</span><select id="cams"></select></div></div>
+  <div class="side">
+    <div id="res"></div>
+    <div class="stats"><span style="background:#2e7d32">Giriş: <b id="cOk">0</b></span><span style="background:#ef6c00">Mükerrer: <b id="cDup">0</b></span><span style="background:#c62828">Hata: <b id="cErr">0</b></span></div>
+    <div id="log"></div>
+    <input id="man" placeholder="Manuel kod / USB okuyucu → Enter" autocomplete="off">
+    <button id="wipe" class="mini" type="button">Yerel veriyi temizle</button>
+  </div>
+</div>
+<script>
+"use strict";
+
+const CFG = {
+  ID: "zafer",
+  BASLIK: "Zafer Bayramı Resepsiyonu",
+  KISA: "ZAFER",
+  RENK: "#6a1b9a",
+  URL: "ZAFER_WEB_UYGULAMASI_ADRESI_BURAYA",
+  KEY: "",
+  TIMEOUT: 25000,
+  TIMEOUT_FAST: 10000,
+  PROBE_MS: 4000,
+  PROBE_TIMEOUT: 8000,
+  LIST_REFRESH: 60000,
+  LIST_TIMEOUT: 40000,
+  COOLDOWN: 4000,
+  REARM_MS: 1500,
+  RETRY_MS: 1000,
+  SCAN_MS: 70,
+  DBLTAP_MS: 500,
+  STALE_MS: 30000,
+  KEEPALIVE: 60000,
+  LOCAL_FIRST: true,
+  SYNC_DELAY: 300,
+  SYNC_PARALLEL: 3,
+  KEEP_LOCAL_MS: 120000
+};
+
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
+const CLIENT_ERROR = {renk: "#b71c1c", bg: "#ffebee", border: "#c62828"};
+
+const $ = id => document.getElementById(id);
+const ESC_MAP = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"};
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ESC_MAP[c]);
+const store = {
+  get(k) { try { return localStorage.getItem(CFG.ID + ":" + k); } catch (_) { return null; } },
+  set(k, v) { try { localStorage.setItem(CFG.ID + ":" + k, v); } catch (_) {} }
+};
+const deviceKey = () => CFG.KEY || store.get("key") || "";
+document.title = CFG.BASLIK + " - Kapı Tarama";
+document.querySelector("#start h1").textContent = CFG.BASLIK;
+$("ev").textContent = CFG.KISA;
+$("ev").style.background = CFG.RENK;
+if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(CFG.URL)) {
+  $("err").textContent = "Bu tarayıcının sunucu adresi (CFG.URL) ayarlanmamış.";
+  $("go").disabled = true;
+}
+
+const api = (() => {
+  let seq = 0;
+
+  function jsonp(params, timeout) {
+    return new Promise((resolve, reject) => {
+      const cb = "cb" + Date.now().toString(36) + (++seq);
+      const script = document.createElement("script");
+      let finished = false, timer;
+
+      const finish = (fn, value) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        window[cb] = () => {};
+        script.remove();
+        setTimeout(() => delete window[cb], 60000);
+        fn(value);
+      };
+
+      window[cb] = data => finish(resolve, data);
+      script.onerror = () => finish(reject, new Error("net"));
+      timer = setTimeout(() => finish(reject, new Error("timeout")), timeout);
+      script.src = CFG.URL + "?" + new URLSearchParams({
+        ...params, callback: cb, requestId: cb, anahtar: deviceKey(), _: Date.now()
+      });
+      document.head.appendChild(script);
+    });
+  }
+
+  let lastError = null;
+
+  async function request(params, timeout, track = true) {
+    try { if (track) lastError = null; return await jsonp(params, timeout); }
+    catch (e) { if (track) lastError = e.message === "timeout" ? "timeout" : "net"; return null; }
+  }
+
+  function call(ref, opts = {}) {
+    const params = {ref};
+    if (opts.saat) params.saat = opts.saat;
+    if (opts.donem != null) params.donem = opts.donem;
+    if (opts.kisi != null) params.kisi = opts.kisi;
+    return request(params, opts.timeout || CFG.TIMEOUT);
+  }
+
+  const list = () => request({action: "liste"}, CFG.LIST_TIMEOUT, false);
+  const people = (ref, n) => request({action: "kisi", ref, sayi: n}, CFG.TIMEOUT);
+
+  return {call, list, people, error: () => lastError};
+})();
+
+const beep = (() => {
+  const PATTERNS = {ok: [[880, .12]], dup: [[440, .15], [440, .15]], err: [[180, .45]]};
+  let ac;
+  return kind => {
+    try {
+      ac = ac || new AudioContext();
+      if (ac.state === "suspended") ac.resume();
+      let t = ac.currentTime;
+      PATTERNS[kind].forEach(([freq, dur]) => {
+        const osc = ac.createOscillator(), gain = ac.createGain();
+        osc.type = kind === "err" ? "sawtooth" : "sine";
+        osc.frequency.value = freq; gain.gain.value = .15;
+        osc.connect(gain); gain.connect(ac.destination);
+        osc.start(t); osc.stop(t + dur); t += dur + .05;
+      });
+    } catch (_) {}
+  };
+})();
+
+const ui = (() => {
+  const counts = {ok: 0, dup: 0, err: 0};
+  const COUNTER_IDS = {ok: "cOk", dup: "cDup", err: "cErr"};
+  let idleTimer;
+
+  const kindOf = p => p.kod === "OK" ? "ok" : p.kod === "DUPLICATE" ? "dup" : "err";
+
+  function paint(palette, html) {
+    const box = $("res");
+    box.classList.remove("stale");
+    box.style.background = palette.bg;
+    box.style.color = palette.renk;
+    box.style.borderColor = palette.border || palette.renk;
+    box.innerHTML = html;
+  }
+
+  function idle() {
+    const box = $("res");
+    box.removeAttribute("style");
+    box.classList.remove("compact", "stale");
+    box.innerHTML = '<div class="t">HAZIR</div><div class="r">Karekodu kameraya gösterin</div>';
+  }
+
+  function checking() {
+    clearTimeout(idleTimer);
+    $("res").classList.remove("compact");
+    paint({bg: "#263545", renk: "#fff", border: "#607d8b"}, '<div class="t">Kontrol ediliyor…</div>');
+  }
+
+  function toView(p, kind) {
+    if (kind === "err") {
+      return {
+        html: `<div class="t">${esc(p.adSoyad)}</div><div class="r">${esc(p.durum)}</div><div class="s">${esc(p.saat)}</div>`,
+        logName: p.adSoyad, logTag: p.kod
+      };
+    }
+    return {
+      html: `<div class="t">${esc(p.durum)}</div><div class="r">${esc(p.rutbe)}</div><div class="n">${esc(p.adSoyad)}</div><div class="s">${esc(p.saat)}</div>`,
+      logName: [p.rutbe, p.adSoyad].filter(Boolean).join(" "), logTag: p.durum
+    };
+  }
+
+  const INVITE = {2: "EŞLİ DAVET", 1: "EŞSİZ DAVET"};
+  const PEOPLE = {2: "2 KİŞİ", 1: "1 KİŞİ"};
+  const MAX_LOG = 40, UI_KEY = "uiState_v1";
+  const logData = [];
+
+  const showCounts = () => { for (const k in COUNTER_IDS) $(COUNTER_IDS[k]).textContent = counts[k]; };
+
+  function persistUi() {
+    store.set(UI_KEY, JSON.stringify({
+      counts,
+      rows: logData.map(r => ({
+        t: r.t, name: r.name, tag: r.tag, color: r.color,
+        e: r.entry ? {token: r.entry.token, invited: r.entry.invited, people: r.entry.people, r: r.entry.r, a: r.entry.a, dup: !!r.entry.dup} : null
+      }))
+    }));
+  }
+
+  function togglePeople(entry) {
+    const n = entry.people === 2 ? 1 : 2, delta = n - entry.people;
+    const same = logData.map(r => r.entry).filter(e => e && e.token === entry.token);
+    if (!same.includes(entry)) same.push(entry);
+    if (same.some(e => !e.dup)) counts.ok += delta;
+    same.forEach(e => {
+      e.people = n;
+      if (e.logBtn) e.logBtn.textContent = PEOPLE[n];
+      if (e.panelBtn && e.panelBtn.isConnected) e.panelBtn.textContent = PEOPLE[n];
+    });
+    showCounts();
+    persistUi();
+    local.setPeople(entry.token, n);
+    savePeople(entry.token, n, [entry.r, entry.a].filter(Boolean).join(" "));
+  }
+
+  function onLogTap(entry) {
+    const now = Date.now(), b = entry.logBtn;
+    if (entry.armedAt && now - entry.armedAt <= CFG.DBLTAP_MS) {
+      entry.armedAt = 0; b.classList.remove("armed");
+      return togglePeople(entry);
+    }
+    entry.armedAt = now; b.classList.add("armed");
+    setTimeout(() => { if (entry.armedAt === now) { entry.armedAt = 0; b.classList.remove("armed"); } }, CFG.DBLTAP_MS);
+  }
+
+  function buildRow(rec) {
+    const row = document.createElement("div");
+    row.style.borderColor = rec.color;
+    const e = rec.entry, split = e && e.a;
+    const rank = split ? (e.r || "") : "";
+    const who = split ? e.a : rec.name;
+    row.innerHTML = `<span class="info"><span class="l1"><b>${esc(rec.t)}</b><span class="tg">${esc(rec.tag)}</span></span>`
+      + (rank ? `<span class="rk">${esc(rank)}</span>` : "")
+      + `<span class="nm">${esc(who)}</span></span>`;
+    const entry = rec.entry;
+    if (entry) {
+      const ctl = document.createElement("span"); ctl.className = "ctl";
+      const pill = document.createElement("span");
+      pill.className = "pill " + (entry.invited === 2 ? "eslid" : "esizd");
+      pill.textContent = INVITE[entry.invited];
+      const b = document.createElement("button");
+      b.className = "pp"; b.type = "button"; b.textContent = PEOPLE[entry.people];
+      b.onclick = () => onLogTap(entry);
+      entry.logBtn = b; ctl.append(pill, b); row.appendChild(ctl);
+    }
+    return row;
+  }
+
+  function log(view, color, entry) {
+    const rec = {t: new Date().toLocaleTimeString("tr-TR"), name: view.logName, tag: view.logTag, color, entry};
+    logData.unshift(rec);
+    while (logData.length > MAX_LOG) logData.pop();
+    const list = $("log");
+    list.prepend(buildRow(rec));
+    while (list.children.length > MAX_LOG) list.lastChild.remove();
+    persistUi();
+  }
+
+  function restore() {
+    let saved = null;
+    try { saved = JSON.parse(store.get(UI_KEY) || "null"); } catch (_) {}
+    if (!saved) return;
+    Object.assign(counts, saved.counts || {});
+    showCounts();
+    (saved.rows || []).slice().reverse().forEach(r => {
+      const rec = {t: r.t, name: r.name, tag: r.tag, color: r.color, entry: r.e ? {...r.e} : null};
+      logData.unshift(rec);
+      $("log").prepend(buildRow(rec));
+    });
+  }
+
+  function reset() {
+    counts.ok = counts.dup = counts.err = 0;
+    showCounts();
+    logData.length = 0;
+    $("log").innerHTML = "";
+    store.set(UI_KEY, "");
+  }
+
+  function show(p, opts) {
+    const kind = kindOf(p);
+    if (kind === "err" && !p.renk) Object.assign(p, CLIENT_ERROR);
+    const view = toView(p, kind);
+    const invited = p.esli ? 2 : 1;
+    const entry = (kind === "ok" || kind === "dup") && opts && opts.token
+      ? {token: opts.token, invited, people: p.kisi || invited, r: p.rutbe, a: p.adSoyad, dup: kind === "dup"} : null;
+    const badge = entry ? INVITE[invited] : "";
+    paint(p, view.html + (badge
+      ? '<div class="acts"><div class="esli" id="badge">' + badge + '</div>' +
+        (entry ? '<button class="solo" id="solo" type="button">' + PEOPLE[entry.people] + '</button>' : "") + '</div>'
+      : ""));
+    $("res").classList.toggle("compact", !!badge);
+    if (entry) { entry.panelBtn = $("solo"); entry.panelBtn.onclick = () => togglePeople(entry); }
+    beep(kind);
+    counts[kind] += kind === "ok" ? (entry ? entry.people : (p.kisi || 1)) : 1;
+    showCounts();
+    log(view, p.border || p.renk, entry);
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(markStale, CFG.STALE_MS);
+  }
+
+  function markStale() {
+    $("res").classList.add("stale");
+    const b = $("solo"); if (b) b.disabled = true;
+  }
+
+  function clientError(kod, title, message) {
+    show({kod, adSoyad: title, durum: message, saat: "", ...CLIENT_ERROR});
+  }
+
+  function note(text, color) { log({logName: text, logTag: ""}, color); }
+
+  return {show, idle, checking, clientError, note, restore, reset, hasData: () => counts.ok + counts.dup + counts.err > 0};
+})();
+
+const TIME_RE = /\d{2}:\d{2}:\d{2}/;
+const secs = t => { const [h, m, s] = t.split(":").map(Number); return h * 3600 + m * 60 + s; };
+const secDiff = (a, b) => { const d = Math.abs(secs(a) - secs(b)); return Math.min(d, 86400 - d); };
+
+const local = (() => {
+  const LIST_KEY = "guestList_v1", QUEUE_KEY = "queue_v1";
+  let items = {}, count = 0, skew = 0, tz = "UTC", queue = [], saveTimer, savedEpoch = null, idSeq = 0;
+  let texts = null, notFound = null;
+
+  const read = k => { try { return JSON.parse(store.get(k) || "null"); } catch (_) { return null; } };
+  const persistList = () => store.set(LIST_KEY, JSON.stringify({items, skew, tz, epoch: savedEpoch, txt: texts, nf: notFound}));
+  const saveListSoon = () => { clearTimeout(saveTimer); saveTimer = setTimeout(persistList, 2000); };
+  const saveQueue = () => store.set(QUEUE_KEY, JSON.stringify(queue));
+
+  function load() {
+    const saved = read(LIST_KEY);
+    if (saved && saved.items) {
+      items = saved.items; count = Object.keys(items).length;
+      skew = saved.skew || 0; tz = saved.tz || tz;
+      savedEpoch = typeof saved.epoch === "string" ? saved.epoch : null;
+      texts = saved.txt || null; notFound = saved.nf || null;
+    }
+    queue = read(QUEUE_KEY) || [];
+    queue.forEach(q => { if (!q.id) q.id = Date.now() + "-" + (++idSeq); });
+  }
+
+  function replace(payload) {
+    const epoch = payload.donem || "";
+    const reset = savedEpoch !== null && savedEpoch !== epoch;
+    const dropped = reset && queue.length > 0;
+    if (reset) { queue = []; saveQueue(); }
+    savedEpoch = epoch;
+    const old = reset ? {} : items, now = Date.now(), map = {};
+    payload.liste.forEach(g => {
+      const m = {r: g.r, a: g.a, l: g.l, k: !!g.k, s: g.s || "", e: !!g.e, p: g.p || 0};
+      const o = old[g.t];
+      if (o && o.k && !m.k && o.ka && now - o.ka < CFG.KEEP_LOCAL_MS) { m.k = true; m.s = o.s; m.p = o.p || m.p; m.ka = o.ka; }
+      map[g.t] = m;
+    });
+    queue.forEach(q => {
+      if (q.type === "kisi") { if (map[q.token]) map[q.token].p = q.kisi; return; }
+      if (map[q.token] && !map[q.token].k) { map[q.token].k = true; map[q.token].s = q.time; map[q.token].p = q.kisi || 0; }
+    });
+    items = map; count = payload.liste.length;
+    tz = payload.tz || tz;
+    texts = payload.txt || texts; notFound = payload.nf || notFound;
+    skew = (payload.zaman || Date.now()) - Date.now();
+    persistList();
+    return {reset, dropped};
+  }
+
+  function wipe() {
+    clearTimeout(saveTimer);
+    items = {}; count = 0; queue = []; savedEpoch = null;
+    store.set(LIST_KEY, ""); store.set(QUEUE_KEY, "[]");
+  }
+
+  function clock() {
+    const d = new Date(Date.now() + skew);
+    try {
+      return new Intl.DateTimeFormat("en-GB", {timeZone: tz, hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23"}).format(d);
+    } catch (_) { return d.toTimeString().slice(0, 8); }
+  }
+
+  function markEntered(token, time, people) {
+    const g = items[token];
+    if (g) { g.k = true; g.s = time; g.ka = Date.now(); if (people) g.p = people; saveListSoon(); }
+  }
+  function setPeople(token, n) {
+    const g = items[token];
+    if (g) { g.p = n; saveListSoon(); }
+  }
+  function enqueue(entry) { queue.push({...entry, id: Date.now() + "-" + (++idSeq)}); saveQueue(); }
+  function dequeue(id) { queue = queue.filter(q => q.id !== id); saveQueue(); }
+  function markTried(id) { const q = queue.find(x => x.id === id); if (q) { q.tried = true; saveQueue(); } }
+  function updateQueuedPeople(token, n) {
+    const q = queue.find(x => x.token === token && !x.type);
+    if (!q) return false;
+    q.kisi = n; saveQueue();
+    return true;
+  }
+
+  return {
+    load, replace, wipe, clock, markEntered, setPeople, enqueue, dequeue, markTried, updateQueuedPeople,
+    epoch: () => (savedEpoch === null ? null : (savedEpoch || "0")),
+    get: t => items[t] || null,
+    text: lang => (texts && (texts[lang] || texts.tr)) || TEXT[lang] || TEXT.tr,
+    notFoundText: () => notFound,
+    ready: () => count > 0,
+    count: () => count,
+    queue: () => queue.slice(),
+    pending: () => queue.length
+  };
+})();
+
+const net = (() => {
+  const s = {online: true, unauthorized: false, ms: null, strikes: 0};
+
+  function render() {
+    const n = local.count(), q = local.pending();
+    const extra = (n ? ` · ${n} davetli` : "") + (q ? (s.online ? ` · ${q} giriş tabloya yazılıyor` : ` · ${q} giriş gönderilecek`) : "");
+    let color, text;
+    if (s.unauthorized) { color = "#e53935"; text = "Cihaz anahtarı hatalı! Sayfayı yenileyip tekrar girin."; }
+    else if (!s.online) {
+      color = n ? "#fb8c00" : "#e53935";
+      text = (n ? "ÇEVRİMDIŞI · yerel liste kullanılıyor" : "Sunucuya ulaşılamıyor · yerel liste yok") + extra;
+    } else if (s.strikes > 0) { color = "#fbc02d"; text = "Sunucu yavaş yanıt veriyor…" + extra; }
+    else if (s.ms == null) { color = "#888"; text = "Sunucu kontrol ediliyor…" + extra; }
+    else { color = "#43a047"; text = `Sunucu hazır (${s.ms} ms)` + extra; }
+    $("dot").style.background = color;
+    $("st").textContent = text;
+  }
+  function up(ms) { s.strikes = 0; const was = !s.online; s.online = true; s.unauthorized = false; if (ms != null) s.ms = ms; render(); return was; }
+  function down() { s.strikes = 0; s.online = false; render(); }
+  function fail(kind) {
+    if (kind === "net" || navigator.onLine === false || ++s.strikes >= 2) { down(); return true; }
+    render();
+    return false;
+  }
+  return {s, render, up, down, fail};
+})();
+
+const TEXT = {
+  tr: {ok: "GİRİŞ BAŞARILI", okT: "Giriş Saati: ", dup: "MÜKERRER GİRİŞ!", dupT: "İlk Giriş Saati: "},
+  en: {ok: "CHECK-IN SUCCESSFUL", okT: "Entry Time: ", dup: "DUPLICATE ENTRY!", dupT: "First Entry Time: "}
+};
+const COLORS = {
+  ok:  {renk: "#1b5e20", bg: "#e8f5e9", border: "#2e7d32"},
+  dup: {renk: "#e65100", bg: "#fff3e0", border: "#ef6c00"}
+};
+
+function offlineResult(token, offline = true, tried = false) {
+  const g = local.get(token);
+  if (!g) {
+    const nf = local.notFoundText() || {headline: "✗ GEÇERSİZ İSTEK", message: "Lütfen resmi davetiyedeki karekodu taratın.", detail: "Sistem Kaydı Bulunamadı"};
+    return {kod: "NOT_FOUND", rutbe: "", adSoyad: nf.headline, durum: nf.message, saat: (nf.detail || "") + " (çevrimdışı liste)", ...CLIENT_ERROR};
+  }
+  const t = local.text(g.l);
+  if (g.k) return {kod: "DUPLICATE", rutbe: g.r, adSoyad: g.a, durum: t.dup, saat: t.dupT + g.s, esli: !!g.e, kisi: g.p || undefined, ...COLORS.dup};
+
+  const time = local.clock();
+  local.markEntered(token, time, g.e ? 2 : 1);
+  local.enqueue({token, time, r: g.r, a: g.a, epoch: local.epoch(), kisi: g.e ? 2 : 1, ...(tried ? {tried: true} : {})});
+  net.render();
+  scheduleSync(offline ? 2000 : CFG.SYNC_DELAY);
+  return {kod: "OK", rutbe: g.r, adSoyad: g.a, durum: t.ok, saat: t.okT + time + (offline ? " (çevrimdışı)" : ""), esli: !!g.e, kisi: g.e ? 2 : 1, ...COLORS.ok};
+}
+
+function absorb(token, r) {
+  if (r.kod === "OK" || r.kod === "DUPLICATE") {
+    const t = (String(r.saat).match(TIME_RE) || [])[0];
+    if (t) local.markEntered(token, t, r.kisi);
+  }
+}
+
+let syncTimer;
+function scheduleSync(ms) {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => { if (net.s.online && local.pending()) sync(); }, ms);
+}
+
+let syncing = false;
+
+async function syncEntry(q) {
+  const who = [q.r, q.a].filter(Boolean).join(" ");
+  const sentKisi = q.kisi;
+  const r = await api.call(q.token, {saat: q.time, donem: q.epoch, kisi: q.kisi, timeout: CFG.TIMEOUT});
+  if (!r || r.kod === "ERROR") {
+    if (!r) net.fail(api.error());
+    local.markTried(q.id);
+    scheduleSync(5000);
+    return false;
+  }
+  if (r.kod === "UNAUTHORIZED") { net.s.unauthorized = true; net.render(); return false; }
+  local.dequeue(q.id);
+  if (q.kisi !== sentKisi) local.enqueue({type: "kisi", token: q.token, kisi: q.kisi, a: who});
+  if (r.kod === "DUPLICATE") {
+    const theirs = (String(r.saat).match(TIME_RE) || [])[0];
+    const gap = theirs ? secDiff(theirs, q.time) : Infinity;
+    const own = gap === 0 || (q.tried && gap <= 120);
+    if (!own) ui.note(`⚠ ÇAKIŞMA: ${who} başka cihazdan da girmiş (ilk giriş ${theirs || "?"}, bu cihaz ${q.time})`, "#ef6c00");
+  } else if (r.kod === "STALE") {
+    ui.note(`⚠ Eski kayıt atlandı (tablo sıfırlanmış): ${who}`, "#ef6c00");
+  } else if (r.kod !== "OK") {
+    ui.note(`⚠ Senkron hatası: ${who} (${r.kod})`, "#c62828");
+  }
+  net.render();
+  return true;
+}
+
+async function syncPeople(q) {
+  const who = q.a || "";
+  const pr = await api.people(q.token, q.kisi);
+  if (!pr || pr.kod === "ERROR") { if (!pr) net.fail(api.error()); scheduleSync(5000); return false; }
+  if (pr.kod === "UNAUTHORIZED") { net.s.unauthorized = true; net.render(); return false; }
+  local.dequeue(q.id);
+  if (pr.kod !== "PEOPLE") ui.note(`⚠ Kişi sayısı düzeltilemedi: ${who} (${pr.kod})`, "#c62828");
+  net.render();
+  return true;
+}
+
+async function sync() {
+  if (syncing || !net.s.online || !local.pending()) return;
+  syncing = true;
+  try {
+    const all = local.queue();
+    const entries = all.filter(q => q.type !== "kisi"), people = all.filter(q => q.type === "kisi");
+    let next = 0, stop = false;
+    const worker = async () => {
+      while (!stop && next < entries.length) { if (!(await syncEntry(entries[next++]))) stop = true; }
+    };
+    await Promise.all(Array.from({length: Math.min(CFG.SYNC_PARALLEL, entries.length)}, worker));
+    if (stop) return;
+    for (const q of people) { if (!(await syncPeople(q))) return; }
+    if (local.pending()) scheduleSync(CFG.SYNC_DELAY);
+  } finally { syncing = false; }
+}
+
+async function savePeople(token, n, who) {
+  if (local.updateQueuedPeople(token, n)) { scheduleSync(2000); return; }
+  if (net.s.online) {
+    const r = await api.people(token, n);
+    if (r && r.kod === "PEOPLE") return;
+    if (r) { ui.note(`⚠ Kişi sayısı kaydedilemedi: ${who} (${r.kod})`, "#c62828"); return; }
+    net.fail(api.error());
+  }
+  local.enqueue({type: "kisi", token, kisi: n, a: who});
+  net.render();
+  scheduleSync(5000);
+}
+
+let refreshing = false;
+async function refreshList() {
+  if (refreshing || !net.s.online) return false;
+  refreshing = true;
+  try {
+    const r = await api.list();
+    if (r && r.kod === "LIST" && Array.isArray(r.liste)) {
+      const res = local.replace(r);
+      if (res.reset) {
+        ui.reset(); ui.idle();
+        ui.note(res.dropped
+          ? "⚠ Sunucudaki veriler sıfırlanmış: sayaçlar, günlük ve bekleyen girişler temizlendi"
+          : "⚠ Sunucudaki veriler sıfırlanmış: bu cihazdaki sayaçlar ve günlük temizlendi", "#ef6c00");
+      }
+      net.render();
+      return true;
+    }
+    if (r && r.kod === "UNAUTHORIZED") { net.s.unauthorized = true; net.render(); }
+    return false;
+  } finally { refreshing = false; }
+}
+
+async function syncAll() { await sync(); refreshList(); }
+
+const scanner = (() => {
+  const state = new Map();
+  const STATE_TTL = 10 * 60 * 1000;
+
+  function prune(now) {
+    if (state.size < 200) return;
+    for (const [k, v] of state) if (now - v.seen > STATE_TTL && now >= v.holdUntil) state.delete(k);
+  }
+
+  return async function onCode(raw) {
+    raw = String(raw || "").trim();
+    if (!raw) return;
+
+    const match = raw.match(UUID_RE);
+    const token = match ? match[0].toLowerCase() : null;
+    const key = token || raw, now = Date.now();
+    prune(now);
+
+    let st = state.get(key);
+    if (!st) { st = {seen: 0, holdUntil: 0, retry: false}; state.set(key, st); }
+    const inView = now - st.seen < CFG.REARM_MS;
+    st.seen = now;
+    if (now < st.holdUntil || (inView && !st.retry)) return;
+    st.retry = false;
+
+    const done = hold => { st.seen = Date.now(); st.holdUntil = Date.now() + hold; };
+
+    if (!token) {
+      ui.clientError("INVALID_QR", "✗ GEÇERSİZ QR", "Geçersiz veya süresi dolmuş davetiye karekodu.");
+      return done(CFG.COOLDOWN);
+    }
+
+    const known = local.get(token);
+
+    if (CFG.LOCAL_FIRST && known) {
+      const offline = !net.s.online;
+      ui.show(offlineResult(token, offline), {token});
+      if (offline) ping();
+      return done(CFG.COOLDOWN);
+    }
+
+    ui.checking();
+
+    let sent = false;
+    if (net.s.online || !local.ready()) {
+      sent = true;
+      const result = await api.call(token, {timeout: local.ready() ? CFG.TIMEOUT_FAST : CFG.TIMEOUT});
+      if (result && result.kod === "ERROR") {
+        if (!known) { ui.show(result, {token}); st.retry = true; return done(CFG.RETRY_MS); }
+      } else if (result) {
+        if (net.up()) syncAll();
+        else if (local.pending()) sync();
+        if (!local.ready()) refreshList();
+        absorb(token, result);
+        ui.show(result, {token});
+        return done(CFG.COOLDOWN);
+      } else {
+        net.fail(api.error());
+      }
+    } else {
+      ping();
+    }
+
+    if (!local.ready()) {
+      ui.clientError("NETWORK", "✗ BAĞLANTI HATASI", "Sunucudan yanıt alınamadı. Tekrar okutun.");
+      st.retry = true;
+      return done(CFG.RETRY_MS);
+    }
+    ui.show(offlineResult(token, true, sent), {token});
+    done(CFG.COOLDOWN);
+  };
+})();
+
+let probing = false;
+async function ping() {
+  if (probing) return;
+  probing = true;
+  try {
+    const t0 = performance.now();
+    const r = await api.call("ping", {timeout: net.s.online ? (local.ready() ? CFG.TIMEOUT_FAST : CFG.TIMEOUT) : CFG.PROBE_TIMEOUT});
+    const ms = Math.round(performance.now() - t0);
+
+    if (!r) { if (!net.fail(api.error())) setTimeout(ping, 2000); return; }
+    if (r.kod === "UNAUTHORIZED") {
+      store.set("key", "");
+      net.s.unauthorized = true; net.render();
+      return;
+    }
+    if (r.kod === "INVALID_QR") {
+      if (net.up(ms) || local.pending()) syncAll();
+      else if (!local.ready()) refreshList();
+      return;
+    }
+    $("st").textContent = "Beklenmeyen yanıt: " + r.kod;
+  } finally { probing = false; }
+}
+
+const camera = (() => {
+  const video = $("v");
+  const canvas = document.createElement("canvas");
+  const ctx2d = canvas.getContext("2d", {willReadFrequently: true});
+  const LIB_SOURCES = ["../jsQR.js"];
+  let stream, detector = null, detectFails = 0;
+
+  const loadScript = src => new Promise((ok, fail) => {
+    const s = document.createElement("script");
+    s.src = src; s.onload = ok; s.onerror = fail;
+    document.head.appendChild(s);
+  });
+
+  async function initDecoder() {
+    try {
+      if ("BarcodeDetector" in window && (await BarcodeDetector.getSupportedFormats()).includes("qr_code")) {
+        detector = new BarcodeDetector({formats: ["qr_code"]});
+        return;
+      }
+    } catch (_) {}
+    for (const src of LIB_SOURCES) {
+      try { await loadScript(src); if (window.jsQR) return; } catch (_) {}
+    }
+    throw new Error("QR çözücü yüklenemedi: jsQR.js dosyası ana dizinde (cumhuriyet ve zafer klasörlerinin bir üstünde) olmalı.");
+  }
+
+  async function start(deviceId) {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    const constraints = deviceId
+      ? {deviceId: {exact: deviceId}}
+      : {facingMode: {ideal: "environment"}, width: {ideal: 1280}, height: {ideal: 720}};
+    stream = await navigator.mediaDevices.getUserMedia({video: constraints, audio: false});
+    const track = stream.getVideoTracks()[0];
+    track.onended = () => setTimeout(ensureRunning, 1000);
+    video.srcObject = stream;
+    await video.play();
+
+    const devices = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "videoinput");
+    const current = stream.getVideoTracks()[0].getSettings().deviceId;
+    $("cams").innerHTML = devices.map((d, i) =>
+      `<option value="${esc(d.deviceId)}" ${d.deviceId === current ? "selected" : ""}>${esc(d.label || "Kamera " + (i + 1))}</option>`
+    ).join("");
+  }
+
+  let restarting = false;
+  async function ensureRunning() {
+    const track = stream && stream.getVideoTracks()[0];
+    const healthy = track && track.readyState === "live" && !video.paused && !video.ended && video.readyState >= 2;
+    if (restarting || healthy) return;
+    restarting = true;
+    try {
+      $("st").textContent = "Kamera yeniden başlatılıyor…";
+      await start(store.get("cam")).catch(() => start(null));
+      ping();
+    } catch (e) {
+      setTimeout(ensureRunning, 3000);
+    } finally {
+      restarting = false;
+    }
+  }
+
+  async function fallbackToJsQR() {
+    detectFails = 0;
+    try {
+      if (!window.jsQR) await loadScript(LIB_SOURCES[0]);
+      if (window.jsQR) detector = null;
+    } catch (_) {}
+  }
+
+  async function decode() {
+    if (detector) {
+      try {
+        const found = await detector.detect(video);
+        detectFails = 0;
+        return found[0] ? found[0].rawValue : null;
+      } catch (e) {
+        if (++detectFails >= 5) await fallbackToJsQR();
+        throw e;
+      }
+    }
+    const scale = Math.min(1, 720 / video.videoWidth);
+    const w = Math.round(video.videoWidth * scale), h = Math.round(video.videoHeight * scale);
+    if (canvas.width !== w) { canvas.width = w; canvas.height = h; }
+    ctx2d.drawImage(video, 0, 0, w, h);
+    const img = ctx2d.getImageData(0, 0, w, h);
+    const code = window.jsQR(img.data, w, h, {inversionAttempts: "dontInvert"});
+    return code ? code.data : null;
+  }
+
+  function run(onCode) {
+    let lastRun = 0;
+    const step = async ts => {
+      try {
+        if (ts - lastRun >= CFG.SCAN_MS && video.readyState >= 2 && video.videoWidth) {
+          lastRun = ts;
+          const text = await decode();
+          if (text) await onCode(text);
+        }
+      } catch (e) {
+        console.warn("tarama hatası:", e);
+      } finally {
+        requestAnimationFrame(step);
+      }
+    };
+    requestAnimationFrame(step);
+  }
+
+  return {initDecoder, start, run, ensureRunning};
+})();
+
+const keepAwake = (() => {
+  async function acquire() {
+    try {
+      if ("wakeLock" in navigator && document.visibilityState === "visible") {
+        await navigator.wakeLock.request("screen");
+      }
+    } catch (_) {}
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") return;
+    acquire();
+    camera.ensureRunning();
+    ping().then(refreshList);
+  });
+
+  return {acquire};
+})();
+
+ui.idle();
+local.load();
+ui.restore();
+
+window.addEventListener("beforeunload", e => {
+  if (ui.hasData() || local.pending()) { e.preventDefault(); e.returnValue = ""; }
+});
+
+(() => {
+  const bar = document.querySelector(".bar"), cam = document.querySelector(".cam");
+  const sync = () => cam.style.setProperty("--bar-h", bar.offsetHeight + "px");
+  sync();
+  if ("ResizeObserver" in window) new ResizeObserver(sync).observe(bar);
+})();
+if (deviceKey()) $("key").hidden = true; else $("key").hidden = false;
+
+$("go").onclick = async () => {
+  try {
+    if (!deviceKey()) {
+      const typed = $("key").value.trim();
+      if (!typed) throw new Error("Cihaz anahtarını girin.");
+      store.set("key", typed);
+    }
+    beep("ok");
+    await camera.initDecoder();
+    await camera.start(store.get("cam")).catch(() => camera.start(null));
+    $("start").remove();
+    keepAwake.acquire();
+    camera.run(scanner);
+    ping().then(refreshList);
+    setInterval(ping, CFG.KEEPALIVE);
+    setInterval(() => { if (!net.s.online) ping(); }, CFG.PROBE_MS);
+    setInterval(refreshList, CFG.LIST_REFRESH);
+    window.addEventListener("online", ping);
+    window.addEventListener("offline", () => net.down());
+  } catch (e) {
+    $("err").textContent = "Hata: " + (e.message || e);
+  }
+};
+
+$("wipe").onclick = () => {
+  const q = local.pending();
+  const msg = "Bu cihazdaki davetli listesi, sayaçlar ve günlük silinecek." +
+    (q ? "\n\nDİKKAT: tabloya henüz gönderilmemiş " + q + " giriş de silinecek ve tabloya İŞLENMEYECEK." : "") +
+    "\n\nDevam edilsin mi?";
+  if (!window.confirm(msg)) return;
+  local.wipe();
+  ui.reset();
+  net.render();
+  ui.note("Yerel veri temizlendi", "#607d8b");
+  refreshList();
+};
+$("cams").onchange = e => { store.set("cam", e.target.value); camera.start(e.target.value); };
+$("man").addEventListener("keydown", e => {
+  if (e.key === "Enter") { scanner(e.target.value); e.target.value = ""; }
+});
+</script></body></html>
