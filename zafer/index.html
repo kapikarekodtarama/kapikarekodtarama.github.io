@@ -33,7 +33,23 @@ video{width:100%;height:100%;object-fit:cover}
 #log .pill{padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.14);font-size:11px;font-weight:700;text-align:center;white-space:nowrap}
 #log .pill.eslid{color:#ffe082}#log .pill.esizd{color:#b0bec5}
 #log .pp{padding:4px 8px;min-height:32px;border:2px solid #ffcc80;border-radius:7px;background:transparent;color:#ffcc80;font-size:14px;font-weight:800;cursor:pointer;white-space:nowrap;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none}
-#log .pp.armed{background:rgba(255,204,128,.28)}   
+#log .pp.armed{background:rgba(255,204,128,.28)}
+#res .r2{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;width:100%}
+#res .r2 .solo{width:auto;flex:0 1 auto}
+#res .undo{width:auto;max-width:94%;margin-top:4px;min-height:34px;padding:4px 22px;border:1px solid currentColor;border-radius:10px;background:transparent;color:inherit;font-size:clamp(12px,3.4vw,16px);font-weight:600;cursor:pointer;opacity:.9}
+#res .undo:disabled{opacity:.35;cursor:default}
+#log .l2{display:flex;gap:5px}
+#log .gb{padding:3px 7px;min-height:32px;border:2px solid #ef9a9a;border-radius:7px;background:transparent;color:#ef9a9a;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#log .iptal .nm{text-decoration:line-through;opacity:.65}
+#mdl{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
+#mdl[hidden]{display:none}
+#mdl .box{width:min(440px,100%);background:#1b2733;border:2px solid #607d8b;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px}
+#mdl .who{font-weight:800;font-size:18px;overflow-wrap:anywhere}
+#mdl .msg{color:#cfd8dc;font-size:14px}
+#mdl input{width:100%;font-size:16px;padding:10px;border-radius:6px;border:1px solid #555;background:#222;color:#fff}
+#mdl .row{display:flex;gap:10px}
+#mdl .row button{flex:1;min-height:46px;border:0;border-radius:8px;font-size:16px;font-weight:800;color:#fff;cursor:pointer}
+#mdl #mNo{background:#455a64}#mdl #mYes{background:#c62828}   
 .stats{display:flex;gap:8px;font-weight:700}
 .stats span{flex:1;padding:6px;border-radius:6px;text-align:center}
 #log{height:26%;overflow:auto;background:#152030;border-radius:8px;padding:6px;font-size:14px}
@@ -75,6 +91,7 @@ video{width:100%;height:100%;object-fit:cover}
     <button id="wipe" class="mini" type="button">Yerel veriyi temizle</button>
   </div>
 </div>
+<div id="mdl" hidden><div class="box"><div class="who" id="mWho"></div><div class="msg" id="mMsg"></div><input id="mNote" maxlength="120" placeholder="Kimlikteki ad / not (isteğe bağlı)" autocomplete="off"><div class="row"><button id="mNo" type="button">Vazgeç</button><button id="mYes" type="button">Girişi Geri Al</button></div></div></div>
 <script>
 "use strict";
 
@@ -170,8 +187,9 @@ const api = (() => {
 
   const list = () => request({action: "liste"}, CFG.LIST_TIMEOUT, false);
   const people = (ref, n) => request({action: "kisi", ref, sayi: n}, CFG.TIMEOUT);
+  const undo = (ref, o = {}) => request({action: "geri", ref, saat: o.saat || "", donem: o.donem != null ? o.donem : "", not: o.not || ""}, o.timeout || CFG.TIMEOUT);
 
-  return {call, list, people, error: () => lastError};
+  return {call, list, people, undo, error: () => lastError};
 })();
 
 const beep = (() => {
@@ -247,7 +265,8 @@ const ui = (() => {
       counts,
       rows: logData.map(r => ({
         t: r.t, name: r.name, tag: r.tag, color: r.color,
-        e: r.entry ? {token: r.entry.token, invited: r.entry.invited, people: r.entry.people, r: r.entry.r, a: r.entry.a, dup: !!r.entry.dup} : null
+        e: r.entry ? {token: r.entry.token, invited: r.entry.invited, people: r.entry.people, r: r.entry.r, a: r.entry.a, dup: !!r.entry.dup} : null,
+        x: r.cancelled ? 1 : (r.settled ? 2 : 0)
       }))
     }));
   }
@@ -281,6 +300,7 @@ const ui = (() => {
   function buildRow(rec) {
     const row = document.createElement("div");
     row.style.borderColor = rec.color;
+    if (rec.cancelled) row.className = "iptal";
     const e = rec.entry, split = e && e.a;
     const rank = split ? (e.r || "") : "";
     const who = split ? e.a : rec.name;
@@ -288,7 +308,7 @@ const ui = (() => {
       + (rank ? `<span class="rk">${esc(rank)}</span>` : "")
       + `<span class="nm">${esc(who)}</span></span>`;
     const entry = rec.entry;
-    if (entry) {
+    if (entry && !rec.cancelled && !rec.settled) {
       const ctl = document.createElement("span"); ctl.className = "ctl";
       const pill = document.createElement("span");
       pill.className = "pill " + (entry.invited === 2 ? "eslid" : "esizd");
@@ -296,7 +316,11 @@ const ui = (() => {
       const b = document.createElement("button");
       b.className = "pp"; b.type = "button"; b.textContent = PEOPLE[entry.people];
       b.onclick = () => onLogTap(entry);
-      entry.logBtn = b; ctl.append(pill, b); row.appendChild(ctl);
+      const gb = document.createElement("button");
+      gb.className = "gb"; gb.type = "button"; gb.textContent = "GERİ AL";
+      gb.onclick = () => askUndo(entry);
+      const line = document.createElement("span"); line.className = "l2"; line.append(b, gb);
+      entry.logBtn = b; ctl.append(pill, line); row.appendChild(ctl);
     }
     return row;
   }
@@ -306,7 +330,8 @@ const ui = (() => {
     logData.unshift(rec);
     while (logData.length > MAX_LOG) logData.pop();
     const list = $("log");
-    list.prepend(buildRow(rec));
+    rec.node = buildRow(rec);
+    list.prepend(rec.node);
     while (list.children.length > MAX_LOG) list.lastChild.remove();
     persistUi();
   }
@@ -318,9 +343,10 @@ const ui = (() => {
     Object.assign(counts, saved.counts || {});
     showCounts();
     (saved.rows || []).slice().reverse().forEach(r => {
-      const rec = {t: r.t, name: r.name, tag: r.tag, color: r.color, entry: r.e ? {...r.e} : null};
+      const rec = {t: r.t, name: r.name, tag: r.tag, color: r.color, entry: r.e ? {...r.e} : null, cancelled: r.x === 1, settled: r.x === 2};
       logData.unshift(rec);
-      $("log").prepend(buildRow(rec));
+      rec.node = buildRow(rec);
+      $("log").prepend(rec.node);
     });
   }
 
@@ -341,11 +367,12 @@ const ui = (() => {
       ? {token: opts.token, invited, people: p.kisi || invited, r: p.rutbe, a: p.adSoyad, dup: kind === "dup"} : null;
     const badge = entry ? INVITE[invited] : "";
     paint(p, view.html + (badge
-      ? '<div class="acts"><div class="esli" id="badge">' + badge + '</div>' +
-        (entry ? '<button class="solo" id="solo" type="button">' + PEOPLE[entry.people] + '</button>' : "") + '</div>'
+      ? '<div class="acts"><div class="r2"><div class="esli" id="badge">' + badge + '</div>' +
+        (entry ? '<button class="solo" id="solo" type="button">' + PEOPLE[entry.people] + '</button>' : "") + '</div>' +
+        (entry ? '<button class="undo" id="undo" type="button">' + (entry.dup ? "İLK GİRİŞİ GERİ AL" : "GİRİŞİ GERİ AL") + '</button>' : "") + '</div>'
       : ""));
     $("res").classList.toggle("compact", !!badge);
-    if (entry) { entry.panelBtn = $("solo"); entry.panelBtn.onclick = () => togglePeople(entry); }
+    if (entry) { entry.panelBtn = $("solo"); entry.panelBtn.onclick = () => togglePeople(entry); $("undo").onclick = () => askUndo(entry); }
     beep(kind);
     counts[kind] += kind === "ok" ? (entry ? entry.people : (p.kisi || 1)) : 1;
     showCounts();
@@ -357,6 +384,38 @@ const ui = (() => {
   function markStale() {
     $("res").classList.add("stale");
     const b = $("solo"); if (b) b.disabled = true;
+    const u = $("undo"); if (u) u.disabled = true;
+  }
+
+  function cancelEntry(token, note) {
+    let rows = 0, removed = 0;
+    logData.forEach(rec => {
+      const e = rec.entry;
+      if (!e || e.token !== token) return;
+      if (e.dup || rec.cancelled) { rec.settled = true; }
+      else {
+        removed += e.people; rows++;
+        rec.cancelled = true; rec.tag = "İPTAL" + (note ? " · " + note.slice(0, 40) : ""); rec.color = "#78909c";
+        e.cancelled = true; e.logBtn = null; e.panelBtn = null;
+      }
+      const fresh = buildRow(rec);
+      if (rec.node && rec.node.isConnected) rec.node.replaceWith(fresh);
+      rec.node = fresh;
+    });
+    counts.ok = Math.max(0, counts.ok - removed);
+    showCounts();
+    persistUi();
+    return rows;
+  }
+
+  function showCancelled(entry) {
+    clearTimeout(idleTimer);
+    $("res").classList.remove("compact");
+    paint({bg: "#eceff1", renk: "#37474f", border: "#78909c"},
+      '<div class="t">GİRİŞ GERİ ALINDI</div><div class="r">' + esc(entry.r || "") + '</div><div class="n">' + esc(entry.a || "") +
+      '</div><div class="s">Kayıt iptal edildi. Asıl davetli karekodu tekrar okutabilir.</div>');
+    beep("dup");
+    idleTimer = setTimeout(markStale, CFG.STALE_MS);
   }
 
   function clientError(kod, title, message) {
@@ -365,7 +424,7 @@ const ui = (() => {
 
   function note(text, color) { log({logName: text, logTag: ""}, color); }
 
-  return {show, idle, checking, clientError, note, restore, reset, hasData: () => counts.ok + counts.dup + counts.err > 0};
+  return {show, idle, checking, clientError, note, restore, reset, cancelEntry, showCancelled, hasData: () => counts.ok + counts.dup + counts.err > 0};
 })();
 
 const TIME_RE = /\d{2}:\d{2}:\d{2}/;
@@ -409,6 +468,7 @@ const local = (() => {
     });
     queue.forEach(q => {
       if (q.type === "kisi") { if (map[q.token]) map[q.token].p = q.kisi; return; }
+      if (q.type === "geri") { const m = map[q.token]; if (m) { m.k = false; m.s = ""; m.p = 0; delete m.ka; } return; }
       if (map[q.token] && !map[q.token].k) { map[q.token].k = true; map[q.token].s = q.time; map[q.token].p = q.kisi || 0; }
     });
     items = map; count = payload.liste.length;
@@ -440,6 +500,16 @@ const local = (() => {
     const g = items[token];
     if (g) { g.p = n; saveListSoon(); }
   }
+  function markLeft(token) {
+    const g = items[token];
+    if (g) { g.k = false; g.s = ""; g.p = 0; delete g.ka; saveListSoon(); }
+  }
+  function cancelQueued(token) {
+    const gone = queue.filter(q => q.token === token && (!q.type || q.type === "kisi"));
+    if (!gone.length) return null;
+    queue = queue.filter(q => !gone.includes(q)); saveQueue();
+    return gone.find(q => !q.type) || null;
+  }
   function enqueue(entry) { queue.push({...entry, id: Date.now() + "-" + (++idSeq)}); saveQueue(); }
   function dequeue(id) { queue = queue.filter(q => q.id !== id); saveQueue(); }
   function markTried(id) { const q = queue.find(x => x.id === id); if (q) { q.tried = true; saveQueue(); } }
@@ -451,7 +521,7 @@ const local = (() => {
   }
 
   return {
-    load, replace, wipe, clock, markEntered, setPeople, enqueue, dequeue, markTried, updateQueuedPeople,
+    load, replace, wipe, clock, markEntered, setPeople, enqueue, dequeue, markTried, updateQueuedPeople, markLeft, cancelQueued,
     epoch: () => (savedEpoch === null ? null : (savedEpoch || "0")),
     get: t => items[t] || null,
     text: lang => (texts && (texts[lang] || texts.tr)) || TEXT[lang] || TEXT.tr,
@@ -558,8 +628,28 @@ async function syncEntry(q) {
   return true;
 }
 
+async function syncUndo(q) {
+  const who = [q.r, q.a].filter(Boolean).join(" ");
+  const r = await api.undo(q.token, {saat: q.time, donem: q.epoch, not: q.note, timeout: CFG.TIMEOUT});
+  if (!r || r.kod === "ERROR") {
+    if (!r) net.fail(api.error());
+    local.markTried(q.id);
+    scheduleSync(5000);
+    return false;
+  }
+  if (r.kod === "UNAUTHORIZED") { net.s.unauthorized = true; net.render(); return false; }
+  local.dequeue(q.id);
+  if (r.kod === "STALE") ui.note(`⚠ Eski kayıt atlandı (tablo sıfırlanmış): ${who}`, "#ef6c00");
+  else if (r.kod !== "UNDONE") ui.note(`⚠ Geri alma hatası: ${who} (${r.kod})`, "#c62828");
+  else if (r.log === false) ui.note(`⚠ Giriş geri alındı ancak "İPTAL EDİLEN GİRİŞLER" sayfasına kayıt eklenemedi: ${who}`, "#ef6c00");
+  net.render();
+  return true;
+}
+
 async function syncPeople(q) {
   const who = q.a || "";
+  const gl = local.get(q.token);
+  if (gl && !gl.k) { local.dequeue(q.id); return true; }
   const pr = await api.people(q.token, q.kisi);
   if (!pr || pr.kod === "ERROR") { if (!pr) net.fail(api.error()); scheduleSync(5000); return false; }
   if (pr.kod === "UNAUTHORIZED") { net.s.unauthorized = true; net.render(); return false; }
@@ -574,7 +664,8 @@ async function sync() {
   syncing = true;
   try {
     const all = local.queue();
-    const entries = all.filter(q => q.type !== "kisi"), people = all.filter(q => q.type === "kisi");
+    const undos = all.filter(q => q.type === "geri"), entries = all.filter(q => !q.type), people = all.filter(q => q.type === "kisi");
+    for (const q of undos) { if (!(await syncUndo(q))) return; }
     let next = 0, stop = false;
     const worker = async () => {
       while (!stop && next < entries.length) { if (!(await syncEntry(entries[next++]))) stop = true; }
@@ -597,6 +688,38 @@ async function savePeople(token, n, who) {
   local.enqueue({type: "kisi", token, kisi: n, a: who});
   net.render();
   scheduleSync(5000);
+}
+
+let modalOpen = false;
+
+function askUndo(entry) {
+  if (modalOpen || entry.cancelled) return;
+  modalOpen = true;
+  const who = [entry.r, entry.a].filter(Boolean).join(" ");
+  $("mWho").textContent = who;
+  $("mMsg").textContent = entry.dup
+    ? "Bu davetiyenin daha önce kaydedilen girişi iptal edilecek. Asıl davetli karekodu tekrar okutabilir."
+    : "Giriş kaydı iptal edilecek ve \"İPTAL EDİLEN GİRİŞLER\" sayfasına işlenecek. Asıl davetli karekodu tekrar okutabilir.";
+  $("mNote").value = "";
+  $("mdl").hidden = false;
+  const close = () => { $("mdl").hidden = true; modalOpen = false; };
+  $("mNo").onclick = close;
+  $("mYes").onclick = () => { const note = $("mNote").value.trim().slice(0, 120); close(); undoEntry(entry, note); };
+  $("mNote").onkeydown = e => { if (e.key === "Enter") $("mYes").click(); };
+}
+
+function undoEntry(entry, note) {
+  const token = entry.token, g = local.get(token);
+  const removed = local.cancelQueued(token);
+  const time = (g && g.s) || (removed && removed.time) || "";
+  local.markLeft(token);
+  const rows = ui.cancelEntry(token, note);
+  const who = [entry.r, entry.a].filter(Boolean).join(" ");
+  if (!rows) ui.note(`İPTAL: ${who} - önceki giriş geri alındı${note ? " · " + note : ""}`, "#78909c");
+  ui.showCancelled(entry);
+  local.enqueue({type: "geri", token, time, note, epoch: local.epoch(), r: entry.r, a: entry.a});
+  net.render();
+  scheduleSync(CFG.SYNC_DELAY);
 }
 
 let refreshing = false;
@@ -634,7 +757,7 @@ const scanner = (() => {
 
   return async function onCode(raw) {
     raw = String(raw || "").trim();
-    if (!raw) return;
+    if (!raw || modalOpen) return;
 
     const match = raw.match(UUID_RE);
     const token = match ? match[0].toLowerCase() : null;
@@ -656,8 +779,9 @@ const scanner = (() => {
     }
 
     const known = local.get(token);
+    const verify = !!(known && known.k && !known.ka && net.s.online);
 
-    if (CFG.LOCAL_FIRST && known) {
+    if (CFG.LOCAL_FIRST && known && !verify) {
       const offline = !net.s.online;
       ui.show(offlineResult(token, offline), {token});
       if (offline) ping();
