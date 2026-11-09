@@ -60,6 +60,7 @@ video{width:100%;height:100%;object-fit:cover}
 #log .tg{color:#cfd8dc;font-size:13px}
 #log .rk{color:#b0bec5;font-size:13px;line-height:1.2}
 #log .nm{overflow-wrap:anywhere;text-wrap:balance;font-size:clamp(15px,4.1vw,17px);font-weight:700;line-height:1.2}
+#log .who{display:contents}
 #man,#key{width:100%;font-size:16px;padding:8px;border-radius:6px;border:1px solid #555;background:#222;color:#fff}
 #key{max-width:320px;text-align:center}
 .mini{background:none;border:0;color:#78909c;font-size:12px;text-decoration:underline;cursor:pointer;padding:2px;align-self:flex-start}
@@ -73,6 +74,21 @@ video{width:100%;height:100%;object-fit:cover}
 #res .esli{font-size:clamp(16px,min(4.8vw,3vh),25px);padding:5px 12px}#res .solo{font-size:clamp(20px,min(5.8vw,3.6vh),29px);padding:6px 12px;min-height:46px}
 .aim{bottom:8%;left:14%;right:14%}}
 @media(max-width:800px) and (max-height:740px){#app{grid-template-rows:28% 1fr}}
+@media(min-width:801px) and (min-height:601px){
+#log{height:clamp(176px,30%,320px);padding:6px 0}
+#log .l1,#log .tg{font-size:16px}
+#log .rk{font-size:17px}
+#log .nm{font-size:21px}
+#log .c3{display:grid;grid-template-columns:minmax(0,1fr) max(208px,calc((100% - 16px)/3));column-gap:8px;align-items:center;position:relative;border-left:0;padding:5px 0;margin-bottom:2px}
+#log .c3::before{content:"";position:absolute;left:0;top:0;bottom:0;border-left:5px solid;border-color:inherit}
+#log .c3 .info{grid-column:1;padding-left:20px;min-width:0}
+#log .c3 .ctl{grid-column:2;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;column-gap:8px;align-content:space-between;align-self:stretch;justify-self:center;width:min(calc(100% - 8px),232px);min-width:0;margin-left:0;padding:3px 0}
+#log .c3 .l2{display:contents}
+#res .solo.w{font-size:28px;min-height:48px;padding:6px 16px}
+#log .c3 .pill{grid-column:1 / 3;grid-row:1;display:flex;align-items:center;justify-content:center;width:auto;min-height:26px;margin:0;padding:0;border-radius:7px;font-size:15px}
+#log .c3 .pp{grid-column:1;grid-row:2;display:flex;align-items:center;justify-content:center;width:auto;min-height:26px;margin:0;padding:0;font-size:15px}
+#log .c3 .gb{grid-column:2;grid-row:2;display:flex;align-items:center;justify-content:center;width:auto;min-height:26px;margin:0;padding:0;font-size:14px}
+}
 </style></head>
 <body>
 <div id="start">
@@ -117,7 +133,9 @@ const CFG = {
   STALE_MS: 30000,
   KEEPALIVE: 60000,
   LOCAL_FIRST: true,
-  SYNC_DELAY: 300,
+  SYNC_DELAY: 100,
+  FEED_MS: 1000,
+  FEED_TIMEOUT: 8000,
   SYNC_PARALLEL: 3,
   KEEP_LOCAL_MS: 120000
 };
@@ -183,6 +201,7 @@ const api = (() => {
     if (opts.saat) params.saat = opts.saat;
     if (opts.donem != null) params.donem = opts.donem;
     if (opts.kisi != null) params.kisi = opts.kisi;
+    if (opts.onay) params.onay = "1";
     return request(params, opts.timeout || CFG.TIMEOUT);
   }
 
@@ -190,7 +209,11 @@ const api = (() => {
   const people = (ref, n) => request({action: "kisi", ref, sayi: n}, CFG.TIMEOUT);
   const undo = (ref, o = {}) => request({action: "geri", ref, saat: o.saat || "", donem: o.donem != null ? o.donem : "", not: o.not || ""}, o.timeout || CFG.TIMEOUT);
 
-  return {call, list, people, undo, error: () => lastError};
+  const deny = (ref, o = {}) => request({action: "uyari", ref, saat: o.saat || "", donem: o.donem != null ? o.donem : ""}, o.timeout || CFG.TIMEOUT);
+
+  const feed = (id, n) => request({action: "akis", id: id || "", n: n || 0}, CFG.FEED_TIMEOUT, false);
+
+  return {call, list, people, undo, deny, feed, error: () => lastError};
 })();
 
 const beep = (() => {
@@ -219,6 +242,19 @@ const ui = (() => {
 
   const kindOf = p => p.kod === "OK" ? "ok" : p.kod === "DUPLICATE" ? "dup" : "err";
 
+  const DESK = window.matchMedia ? window.matchMedia("(min-width:801px) and (min-height:601px)") : {matches: false};
+  function fitRes() {
+    const box = $("res"), kids = Array.from(box.children);
+    kids.forEach(c => { c.style.zoom = ""; });
+    if (!DESK.matches) return;
+    let k = 1;
+    for (let i = 0; i < 8 && box.scrollHeight > box.clientHeight + 1 && k > 0.5; i++) {
+      k = Math.max(0.5, k * (box.clientHeight / box.scrollHeight) * 0.97);
+      kids.forEach(c => { c.style.zoom = String(k); });
+    }
+  }
+  window.addEventListener("resize", () => requestAnimationFrame(fitRes));
+
   function paint(palette, html) {
     const box = $("res");
     box.classList.remove("stale");
@@ -226,6 +262,7 @@ const ui = (() => {
     box.style.color = palette.renk;
     box.style.borderColor = palette.border || palette.renk;
     box.innerHTML = html;
+    requestAnimationFrame(fitRes);
   }
 
   function idle() {
@@ -316,11 +353,12 @@ const ui = (() => {
     const e = rec.entry, split = e && e.a;
     const rank = split ? (e.r || "") : "";
     const who = split ? e.a : rec.name;
-    row.innerHTML = `<span class="info"><span class="l1"><b>${esc(rec.t)}</b><span class="tg">${esc(rec.tag)}</span></span>`
+    row.innerHTML = `<span class="info"><span class="l1"><b>${esc(rec.t)}</b><span class="tg">${esc(rec.tag)}</span></span><span class="who">`
       + (rank ? `<span class="rk">${esc(rank)}</span>` : "")
-      + `<span class="nm">${esc(who)}</span></span>`;
+      + `<span class="nm">${esc(who)}</span></span></span>`;
     const entry = rec.entry;
     if (entry && !rec.cancelled && !rec.settled) {
+      row.classList.add("c3");
       const ctl = document.createElement("span"); ctl.className = "ctl";
       const pill = document.createElement("span");
       pill.className = "pill " + (entry.invited === 2 ? "eslid" : "esizd");
@@ -395,6 +433,7 @@ const ui = (() => {
 
   function markStale() {
     $("res").classList.add("stale");
+    fitRes();
     const b = $("solo"); if (b) b.disabled = true;
     const u = $("undo"); if (u) u.disabled = true;
   }
@@ -430,13 +469,40 @@ const ui = (() => {
     idleTimer = setTimeout(markStale, CFG.STALE_MS);
   }
 
+  function warn(token, info) {
+    warnOpen = true;
+    clearTimeout(idleTimer);
+    const who = [info.r, info.a].filter(Boolean).join(" ");
+    const at = (String(info.w || "").match(/\d{2}:\d{2}/) || [""])[0];
+    const detail = [at ? "İptal: " + at : "", info.note ? "\u201c" + info.note + "\u201d" : "", info.n > 1 ? "(" + info.n + " kez)" : ""].filter(Boolean).join(" · ");
+    paint({bg: "#fffde7", renk: "#b71c1c", border: "#f9a825"},
+      '<div class="t">⚠ DİKKAT</div><div class="r">' + esc(info.r || "") + '</div><div class="n">' + esc(info.a || "") + '</div>' +
+      '<div class="s">Bu karekodla daha önce giriş İPTAL EDİLDİ' + (detail ? "<br>" + esc(detail) : "") + '<br>Kimliği dikkatle kontrol edin.</div>' +
+      '<div class="acts"><div class="r2"><button class="solo w" id="wOk" type="button">GİRİŞE İZİN VER</button><button class="solo w" id="wNo" type="button">VAZGEÇ</button></div></div>');
+    $("res").classList.add("compact");
+    beep("dup");
+    $("wOk").onclick = () => {
+      warnOpen = false;
+      note("UYARI ONAYI: " + who + " - kimlik kontrol edildi, giriş verildi", "#ef6c00");
+      scanner(token, {confirmed: true, force: true});
+    };
+    $("wNo").onclick = () => {
+      warnOpen = false;
+      note("UYARI: " + who + " - giriş verilmedi (iptal geçmişi var)", "#c62828");
+      local.enqueue({type: "red", token, time: local.clock(), epoch: local.epoch(), r: info.r, a: info.a});
+      net.render();
+      scheduleSync(CFG.SYNC_DELAY);
+      idle();
+    };
+  }
+
   function clientError(kod, title, message) {
     show({kod, adSoyad: title, durum: message, saat: "", ...CLIENT_ERROR});
   }
 
   function note(text, color) { log({logName: text, logTag: ""}, color); }
 
-  return {show, idle, checking, clientError, note, restore, reset, cancelEntry, showCancelled, hasData: () => counts.ok + counts.dup + counts.err > 0};
+  return {show, idle, checking, clientError, note, restore, reset, cancelEntry, showCancelled, warn, hasData: () => counts.ok + counts.dup + counts.err > 0};
 })();
 
 const TIME_RE = /\d{2}:\d{2}:\d{2}/;
@@ -474,13 +540,15 @@ const local = (() => {
     const old = reset ? {} : items, now = Date.now(), map = {};
     payload.liste.forEach(g => {
       const m = {r: g.r, a: g.a, l: g.l, k: !!g.k, s: g.s || "", e: !!g.e, p: g.p || 0};
+      if (g.x) { m.x = g.x; m.xw = g.xw || ""; m.xn = g.xn || ""; }
       const o = old[g.t];
       if (o && o.k && !m.k && o.ka && now - o.ka < CFG.KEEP_LOCAL_MS) { m.k = true; m.s = o.s; m.p = o.p || m.p; m.ka = o.ka; }
       map[g.t] = m;
     });
     queue.forEach(q => {
       if (q.type === "kisi") { if (map[q.token]) map[q.token].p = q.kisi; return; }
-      if (q.type === "geri") { const m = map[q.token]; if (m) { m.k = false; m.s = ""; m.p = 0; delete m.ka; } return; }
+      if (q.type === "geri") { const m = map[q.token]; if (m) { m.k = false; m.s = ""; m.p = 0; delete m.ka; if (!m.x) { m.x = 1; m.xw = q.time || ""; m.xn = q.note || ""; } } return; }
+      if (q.type === "red") return;
       if (map[q.token] && !map[q.token].k) { map[q.token].k = true; map[q.token].s = q.time; map[q.token].p = q.kisi || 0; }
     });
     items = map; count = payload.liste.length;
@@ -522,6 +590,11 @@ const local = (() => {
     queue = queue.filter(q => !gone.includes(q)); saveQueue();
     return gone.find(q => !q.type) || null;
   }
+  function flagCancelled(token, n, w, note) {
+    const g = items[token];
+    if (g) { g.x = n; g.xw = w || ""; g.xn = note || ""; saveListSoon(); }
+  }
+  const hasQueued = token => queue.some(q => q.token === token && !q.type);
   function enqueue(entry) { queue.push({...entry, id: Date.now() + "-" + (++idSeq)}); saveQueue(); }
   function dequeue(id) { queue = queue.filter(q => q.id !== id); saveQueue(); }
   function markTried(id) { const q = queue.find(x => x.id === id); if (q) { q.tried = true; saveQueue(); } }
@@ -533,7 +606,7 @@ const local = (() => {
   }
 
   return {
-    load, replace, wipe, clock, markEntered, setPeople, enqueue, dequeue, markTried, updateQueuedPeople, markLeft, cancelQueued,
+    load, replace, wipe, clock, markEntered, setPeople, enqueue, dequeue, markTried, updateQueuedPeople, markLeft, cancelQueued, flagCancelled, hasQueued,
     epoch: () => (savedEpoch === null ? null : (savedEpoch || "0")),
     get: t => items[t] || null,
     text: lang => (texts && (texts[lang] || texts.tr)) || TEXT[lang] || TEXT.tr,
@@ -581,7 +654,7 @@ const COLORS = {
   dup: {renk: "#e65100", bg: "#fff3e0", border: "#ef6c00"}
 };
 
-function offlineResult(token, offline = true, tried = false) {
+function offlineResult(token, offline = true, tried = false, confirmed = false) {
   const g = local.get(token);
   if (!g) {
     const nf = local.notFoundText() || {headline: "✗ GEÇERSİZ İSTEK", message: "Lütfen resmi davetiyedeki karekodu taratın.", detail: "Sistem Kaydı Bulunamadı"};
@@ -592,7 +665,7 @@ function offlineResult(token, offline = true, tried = false) {
 
   const time = local.clock();
   local.markEntered(token, time, g.e ? 2 : 1);
-  local.enqueue({token, time, r: g.r, a: g.a, epoch: local.epoch(), kisi: g.e ? 2 : 1, ...(tried ? {tried: true} : {})});
+  local.enqueue({token, time, r: g.r, a: g.a, epoch: local.epoch(), kisi: g.e ? 2 : 1, ...(tried ? {tried: true} : {}), ...(confirmed ? {onay: true} : {})});
   net.render();
   scheduleSync(offline ? 2000 : CFG.SYNC_DELAY);
   return {kod: "OK", rutbe: g.r, adSoyad: g.a, durum: t.ok, saat: t.okT + time + (offline ? " (çevrimdışı)" : ""), esli: !!g.e, kisi: g.e ? 2 : 1, ...COLORS.ok};
@@ -616,7 +689,7 @@ let syncing = false;
 async function syncEntry(q) {
   const who = [q.r, q.a].filter(Boolean).join(" ");
   const sentKisi = q.kisi;
-  const r = await api.call(q.token, {saat: q.time, donem: q.epoch, kisi: q.kisi, timeout: CFG.TIMEOUT});
+  const r = await api.call(q.token, {saat: q.time, donem: q.epoch, kisi: q.kisi, onay: q.onay, timeout: CFG.TIMEOUT});
   if (!r || r.kod === "ERROR") {
     if (!r) net.fail(api.error());
     local.markTried(q.id);
@@ -625,6 +698,15 @@ async function syncEntry(q) {
   }
   if (r.kod === "UNAUTHORIZED") { net.s.unauthorized = true; net.render(); return false; }
   local.dequeue(q.id);
+  if (r.kod === "UYARI") {
+    local.cancelQueued(q.token);
+    local.markLeft(q.token);
+    local.flagCancelled(q.token, r.iptalSayisi || 1, r.iptalZamani, r.iptalNot);
+    ui.cancelEntry(q.token, "sunucu uyarısı");
+    ui.note(`⚠ UYARI: ${who} - bu karekodla daha önce giriş iptal edilmişti${r.iptalNot ? " (" + r.iptalNot + ")" : ""}. Giriş sunucuya KAYDEDİLMEDİ, kimliği kontrol edip tekrar okutun.`, "#c62828");
+    net.render();
+    return true;
+  }
   if (q.kisi !== sentKisi) local.enqueue({type: "kisi", token: q.token, kisi: q.kisi, a: who});
   if (r.kod === "DUPLICATE") {
     const theirs = (String(r.saat).match(TIME_RE) || [])[0];
@@ -658,6 +740,24 @@ async function syncUndo(q) {
   return true;
 }
 
+async function syncRed(q) {
+  const who = [q.r, q.a].filter(Boolean).join(" ");
+  const r = await api.deny(q.token, {saat: q.time, donem: q.epoch, timeout: CFG.TIMEOUT});
+  if (!r || r.kod === "ERROR") {
+    if (!r) net.fail(api.error());
+    local.markTried(q.id);
+    scheduleSync(5000);
+    return false;
+  }
+  if (r.kod === "UNAUTHORIZED") { net.s.unauthorized = true; net.render(); return false; }
+  local.dequeue(q.id);
+  if (r.kod === "STALE") ui.note(`⚠ Eski kayıt atlandı (tablo sıfırlanmış): ${who}`, "#ef6c00");
+  else if (r.kod !== "LOGGED") ui.note(`⚠ "VAZGEÇ" kaydı yazılamadı: ${who} (${r.kod})`, "#c62828");
+  else if (r.log === false) ui.note(`⚠ "VAZGEÇ" e-tabloya kaydedilemedi: ${who}`, "#ef6c00");
+  net.render();
+  return true;
+}
+
 async function syncPeople(q) {
   const who = q.a || "";
   const gl = local.get(q.token);
@@ -676,7 +776,7 @@ async function sync() {
   syncing = true;
   try {
     const all = local.queue();
-    const undos = all.filter(q => q.type === "geri"), entries = all.filter(q => !q.type), people = all.filter(q => q.type === "kisi");
+    const undos = all.filter(q => q.type === "geri"), entries = all.filter(q => !q.type), people = all.filter(q => q.type === "kisi"), reds = all.filter(q => q.type === "red");
     for (const q of undos) { if (!(await syncUndo(q))) return; }
     let next = 0, stop = false;
     const worker = async () => {
@@ -685,6 +785,7 @@ async function sync() {
     await Promise.all(Array.from({length: Math.min(CFG.SYNC_PARALLEL, entries.length)}, worker));
     if (stop) return;
     for (const q of people) { if (!(await syncPeople(q))) return; }
+    for (const q of reds) { if (!(await syncRed(q))) return; }
     if (local.pending()) scheduleSync(CFG.SYNC_DELAY);
   } finally { syncing = false; }
 }
@@ -703,6 +804,7 @@ async function savePeople(token, n, who) {
 }
 
 let modalOpen = false;
+let warnOpen = false;
 
 function askUndo(entry) {
   if (modalOpen || entry.cancelled) return;
@@ -725,6 +827,7 @@ function undoEntry(entry, note) {
   const removed = local.cancelQueued(token);
   const time = (g && g.s) || (removed && removed.time) || "";
   local.markLeft(token);
+  local.flagCancelled(token, ((g && g.x) || 0) + 1, local.clock(), note);
   const rows = ui.cancelEntry(token, note);
   const who = [entry.r, entry.a].filter(Boolean).join(" ");
   if (!rows) ui.note(`İPTAL: ${who} - önceki giriş geri alındı${note ? " · " + note : ""}`, "#78909c");
@@ -742,6 +845,7 @@ async function refreshList() {
     const r = await api.list();
     if (r && r.kod === "LIST" && Array.isArray(r.liste)) {
       const res = local.replace(r);
+      if (r.akisId) feed.set(r.akisId, r.akisNo || 0);
       if (res.reset) {
         ui.reset(); ui.idle();
         ui.note(res.dropped
@@ -758,6 +862,39 @@ async function refreshList() {
 
 async function syncAll() { await sync(); refreshList(); }
 
+// Diğer kapıların kayıtları bu cihaza ulaştığında yerel mükerrer kontrolünde kullanılır; süre ağ ve sunucu yanıtına bağlıdır.
+const feed = (() => {
+  let id = store.get("akisId") || "", n = Number(store.get("akisNo")) || 0, busy = false, timer;
+  function set(newId, newN) { id = newId; n = newN; store.set("akisId", id); store.set("akisNo", String(n)); }
+  function apply(x) {
+    const g = local.get(x.t);
+    if (!g) return;
+    if (x.u) {
+      if (!g.k || local.hasQueued(x.t)) return;
+      local.markLeft(x.t);
+      if (!x.v) local.flagCancelled(x.t, (g.x || 0) + 1, x.w || "", x.m || "");
+    } else if (!g.k) {
+      local.markEntered(x.t, x.s, x.p);
+    } else if (x.p && g.p !== x.p) {
+      local.setPeople(x.t, x.p);
+    }
+  }
+  async function poll() {
+    clearTimeout(timer);
+    if (busy) return;
+    if (!net.s.online || net.s.unauthorized || !local.ready() || !id) { timer = setTimeout(poll, CFG.FEED_MS * 3); return; }
+    busy = true;
+    try {
+      const r = await api.feed(id, n);
+      if (r && r.kod === "AKIS") {
+        if (r.reset || (r.donem || "0") !== (local.epoch() || "0")) { await refreshList(); }
+        else { (r.i || []).forEach(apply); set(r.id, r.q); }
+      } else if (r && r.kod === "UNAUTHORIZED") { net.s.unauthorized = true; net.render(); }
+    } finally { busy = false; timer = setTimeout(poll, CFG.FEED_MS); }
+  }
+  return {set, poll};
+})();
+
 const scanner = (() => {
   const state = new Map();
   const STATE_TTL = 10 * 60 * 1000;
@@ -767,9 +904,9 @@ const scanner = (() => {
     for (const [k, v] of state) if (now - v.seen > STATE_TTL && now >= v.holdUntil) state.delete(k);
   }
 
-  return async function onCode(raw) {
+  return async function onCode(raw, opts) {
     raw = String(raw || "").trim();
-    if (!raw || modalOpen) return;
+    if (!raw || modalOpen || warnOpen) return;
 
     const match = raw.match(UUID_RE);
     const token = match ? match[0].toLowerCase() : null;
@@ -778,6 +915,8 @@ const scanner = (() => {
 
     let st = state.get(key);
     if (!st) { st = {seen: 0, holdUntil: 0, retry: false}; state.set(key, st); }
+    if (opts && opts.force) { st.holdUntil = 0; st.seen = 0; st.retry = false; }
+    const confirmed = !!(opts && opts.confirmed);
     const inView = now - st.seen < CFG.REARM_MS;
     st.seen = now;
     if (now < st.holdUntil || (inView && !st.retry)) return;
@@ -791,11 +930,16 @@ const scanner = (() => {
     }
 
     const known = local.get(token);
-    const verify = !!(known && known.k && !known.ka && net.s.online);
 
-    if (CFG.LOCAL_FIRST && known && !verify) {
+    if (known && !known.k && known.x && !confirmed) {
+      ui.warn(token, {r: known.r, a: known.a, n: known.x, w: known.xw, note: known.xn});
+      return done(CFG.COOLDOWN);
+    }
+
+    // Listeden veya akıştan bilinen mükerrer, başarı gibi beklemeden gösterilir.
+    if (CFG.LOCAL_FIRST && known) {
       const offline = !net.s.online;
-      ui.show(offlineResult(token, offline), {token});
+      ui.show(offlineResult(token, offline, false, confirmed), {token});
       if (offline) ping();
       return done(CFG.COOLDOWN);
     }
@@ -805,9 +949,15 @@ const scanner = (() => {
     let sent = false;
     if (net.s.online || !local.ready()) {
       sent = true;
-      const result = await api.call(token, {timeout: local.ready() ? CFG.TIMEOUT_FAST : CFG.TIMEOUT});
+      const result = await api.call(token, {timeout: local.ready() ? CFG.TIMEOUT_FAST : CFG.TIMEOUT, onay: confirmed});
       if (result && result.kod === "ERROR") {
         if (!known) { ui.show(result, {token}); st.retry = true; return done(CFG.RETRY_MS); }
+      } else if (result && result.kod === "UYARI") {
+        net.up();
+        if (!local.ready()) refreshList();
+        local.flagCancelled(token, result.iptalSayisi || 1, result.iptalZamani, result.iptalNot);
+        ui.warn(token, {r: result.rutbe, a: result.adSoyad, n: result.iptalSayisi, w: result.iptalZamani, note: result.iptalNot});
+        return done(CFG.COOLDOWN);
       } else if (result) {
         if (net.up()) syncAll();
         else if (local.pending()) sync();
@@ -1018,6 +1168,7 @@ $("go").onclick = async () => {
     setInterval(ping, CFG.KEEPALIVE);
     setInterval(() => { if (!net.s.online) ping(); }, CFG.PROBE_MS);
     setInterval(refreshList, CFG.LIST_REFRESH);
+    setTimeout(feed.poll, 1500);
     window.addEventListener("online", ping);
     window.addEventListener("offline", () => net.down());
   } catch (e) {
