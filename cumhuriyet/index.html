@@ -735,7 +735,7 @@ async function syncUndo(q) {
   local.dequeue(q.id);
   if (r.kod === "STALE") ui.note(`⚠ Eski kayıt atlandı (tablo sıfırlanmış): ${who}`, "#ef6c00");
   else if (r.kod !== "UNDONE") ui.note(`⚠ Geri alma hatası: ${who} (${r.kod})`, "#c62828");
-  else if (r.log === false) ui.note(`⚠ Giriş geri alındı ancak "İPTAL / UYARI KAYIT" sayfasına kayıt eklenemedi: ${who}`, "#ef6c00");
+  else if (r.log === false) ui.note(`⚠ Giriş geri alındı ancak "GİRİŞ İPTAL / UYARI KAYITLARI" sayfasına kayıt eklenemedi: ${who}`, "#ef6c00");
   net.render();
   return true;
 }
@@ -813,7 +813,7 @@ function askUndo(entry) {
   $("mWho").textContent = who;
   $("mMsg").textContent = entry.dup
     ? "Bu davetiyenin daha önce kaydedilen girişi iptal edilecek. Asıl davetli karekodu tekrar okutabilir."
-    : "Giriş kaydı iptal edilecek ve \"İPTAL / UYARI KAYIT\" sayfasına işlenecek. Asıl davetli karekodu tekrar okutabilir.";
+    : "Giriş kaydı iptal edilecek ve \"GİRİŞ İPTAL / UYARI KAYITLARI\" sayfasına işlenecek. Asıl davetli karekodu tekrar okutabilir.";
   $("mNote").value = "";
   $("mdl").hidden = false;
   const close = () => { $("mdl").hidden = true; modalOpen = false; };
